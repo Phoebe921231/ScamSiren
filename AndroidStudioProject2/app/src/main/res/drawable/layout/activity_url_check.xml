@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EEF5F2"
+    tools:context=".UrlCheckActivity">
+
+    <!-- 返回箭頭 -->
+    <ImageView
+        android:id="@+id/backArrow"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:contentDescription="返回"
+        android:src="@drawable/ic_back"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="網址檢查"
+        android:textColor="#227D60"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/backArrow" />
+
+    <!-- 檢查結果圖示與文字（標題下方） -->
+    <LinearLayout
+        android:id="@+id/topResultLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleText">
+
+    </LinearLayout>
+
+
+    <EditText
+        android:id="@+id/urlInput"
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_url_input"
+        android:hint="請貼上網址"
+        android:inputType="textUri"
+        android:padding="12dp"
+        android:textColor="#000000"
+        android:textSize="22sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/topResultLabelText" />
+
+    <Button
+        android:id="@+id/startCheckButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="20dp"
+        android:backgroundTint="#FF8000"
+        android:text="開始檢查"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/urlInput" />
+
+    <!-- 檢查結果圖示與文字（按鈕下方） -->
+    <LinearLayout
+        android:id="@+id/resultLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/startCheckButton">
+
+    </LinearLayout>
+
+    <!-- 檢查結果顯示區塊 -->
+
+    <FrameLayout
+        android:id="@+id/resultContainer"
+        android:layout_width="330dp"
+        android:layout_height="290dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.493"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/resultLabelText">
+
+        <!-- 綠框背景 -->
+        <View
+            android:id="@+id/greenBox"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_inner_green_box" />
+
+        <!-- 可垂直滑動的文字區塊 -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/resultText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="（結果出來後才顯示）"
+                android:textColor="#227D60"
+                android:textSize="20sp" />
+        </ScrollView>
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/topResultLabelText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="3dp"
+        android:layout_marginTop="24dp"
+        android:text="網址"
+        android:textColor="#227D60"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@+id/linkIcon"
+        app:layout_constraintTop_toBottomOf="@+id/titleText" />
+
+    <ImageView
+        android:id="@+id/linkIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="24dp"
+        android:contentDescription="連結圖示"
+        android:src="@drawable/ic_link2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/titleText" />
+
+    <ImageView
+        android:id="@+id/fileIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="13dp"
+        android:contentDescription="檔案圖示"
+        android:src="@drawable/ic_file"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/startCheckButton" />
+
+    <TextView
+        android:id="@+id/resultLabelText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="3dp"
+        android:layout_marginTop="13dp"
+        android:text="判別結果"
+        android:textColor="#227D60"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@+id/fileIcon"
+        app:layout_constraintTop_toBottomOf="@+id/startCheckButton" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

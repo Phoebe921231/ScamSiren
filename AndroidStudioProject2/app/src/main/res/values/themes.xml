@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.FP2" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- 自訂主色與按鈕顏色 -->
+        <item name="colorPrimary">#227D60</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#227D60</item>
+        <item name="colorSurface">#EEF5F2</item>
+        <item name="colorOnSurface">#227D60</item>
+    </style>
+
+    <style name="Theme.FP" parent="Base.Theme.FP2" />
+</resources>

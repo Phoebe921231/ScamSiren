@@ -1,0 +1,12 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 背景透明 -->
+    <item android:drawable="@android:color/transparent" />
+
+    <!-- 圓形遮罩區域（可選） -->
+    <item>
+        <bitmap
+            android:src="@drawable/logo1_scam"
+            android:gravity="center"
+            android:tileMode="disabled" />
+    </item>
+</layer-list>

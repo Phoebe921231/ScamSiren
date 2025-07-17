@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EEF5F2"
+    tools:context=".activity_privacy_dialog">
+
+    <!-- 標題 -->
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="62dp"
+        android:text="隱私權聲明"
+        android:textColor="#227D60"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 中間白底滑動區 -->
+    <ScrollView
+        android:id="@+id/scrollArea"
+        android:layout_width="324dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintBottom_toTopOf="@id/closeButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/privacyText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="6dp"
+            android:text="非常歡迎您使用「騙局詐現」（以下簡稱本 App）。為了讓您能夠安心使用本 App 所提供的各項功能與服務，特此向您說明本 App 的隱私權保護政策，以保障您的權益，請您詳閱下列內容：\n\n一、隱私權保護政策的適用範圍\n本隱私權保護政策內容，包括本 App 如何處理在您使用服務過程中所收集到的個人資料。\n本政策不適用於本 App 以外的網站，亦不適用於非本 App 所委託或參與管理的人員。\n\n二、個人資料的蒐集、處理及利用方式\n為達成本 App 提供的詐騙辨識功能，當您使用本 App 上傳截圖、錄音檔案或輸入網址時，本 App 會蒐集下列資訊，並依其特定目的進行處理與利用：\n使用者上傳之圖片（如截圖）與音訊資料：用於分析文字或語音內容，以辨識潛在詐騙行為。\n使用者輸入或上傳的網站網址：用於判斷是否為高風險詐騙連結，並回饋檢查結果。\n上述資料僅供本 App 於其功能範圍內分析與使用，不作其他目的利用。如需將資料傳送至伺服器進行分析，將以加密方式處理。\n除非經過使用者明確授權，或依法律規定，否則本 App 不會將您的資料提供給第三人（包括境內及境外），亦不作超出蒐集目的之使用。\n\n三、資料之保護\n本 App 系統與伺服器均設有適當的資訊安全設備與防護措施，包括但不限於防火牆、加密傳輸與存取控管，以確保您的資料安全。\n如本 App 因業務需要委託第三方協助處理分析服務，亦會要求其遵守保密義務，並採取必要之監督措施，確保您的資料安全。\n\n四、與第三人共用個人資料之政策\n本 App 絕不會提供、交換、出租或出售您的任何個人資料予其他個人、團體、企業或機關。但以下情形者不在此限：\n經由您書面同意；\n法律明文規定；\n為維護國家安全或增進公共利益；\n為免除您生命、身體、自由或財產上之危險；\n為防止您違反本 App 服務條款、或有損他人權益之行為時，經必要而揭露您的資料；\n有利於您的權益；\n本 App 委託協力廠商處理個人資料時，已善盡監督管理之責任。\n\n五、Cookie 或追蹤技術之使用\n本 App 並不使用 Cookie 或其他追蹤技術來蒐集使用者資料。未來若新增相關功能，將會於政策中明確說明並取得您的同意。\n\n六、隱私權政策之修正\n本 App 隱私權保護政策將依實際需求及法令變動進行修正。修正後的條款將公布於本 App 畫面中，請您隨時留意相關公告。若您於政策更新後繼續使用本 App，即視為您已閱讀、了解並同意修正後之內容。"
+            android:textColor="#000000"
+            android:textSize="16sp" />
+    </ScrollView>
+
+    <!-- 關閉按鈕 -->
+    <Button
+        android:id="@+id/closeButton"
+        android:layout_width="180dp"
+        android:layout_height="70dp"
+        android:layout_marginBottom="32dp"
+        android:background="@drawable/btn_square"
+        android:gravity="center"
+        android:text="關閉"
+        android:includeFontPadding="false"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

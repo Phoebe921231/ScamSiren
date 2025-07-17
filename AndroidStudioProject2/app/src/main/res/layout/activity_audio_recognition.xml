@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EEF5F2"
+    tools:context=".AudioRecognitionActivity">
+
+    <!-- 返回箭頭 -->
+    <ImageView
+        android:id="@+id/backArrow"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:src="@drawable/ic_back"
+        android:contentDescription="返回"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 標題 -->
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="錄音判別"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:textColor="#227D60"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/backArrow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 上傳錄音檔區塊 -->
+    <FrameLayout
+        android:id="@+id/micContainer"
+        android:layout_width="330dp"
+        android:layout_height="115dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/micIcon"
+            android:layout_width="300dp"
+            android:layout_height="85dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_inner_green_box"
+            android:src="@drawable/ic_mic2"
+            android:scaleType="centerInside"
+            android:contentDescription="麥克風圖示" />
+    </FrameLayout>
+
+
+    <!-- 並排按鈕 -->
+    <LinearLayout
+        android:id="@+id/buttonRow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/micContainer">
+
+        <Button
+            android:id="@+id/selectAudioButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:backgroundTint="#227D60"
+            android:text="選擇錄音檔"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/startRecognitionButton"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#FF8000"
+            android:text="開始判別"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- 判別結果標題區塊 -->
+    <LinearLayout
+        android:id="@+id/resultLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/buttonRow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+    </LinearLayout>
+
+    <!-- 判別結果區塊 -->
+
+    <FrameLayout
+        android:id="@+id/resultContainer"
+        android:layout_width="330dp"
+        android:layout_height="290dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.506"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/resultLabelText">
+
+        <!-- 綠框背景 -->
+        <View
+            android:id="@+id/greenBox"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_inner_green_box" />
+
+        <!-- 可垂直滑動的文字區塊 -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/resultText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="（結果出來後才顯示）"
+                android:textColor="#227D60"
+                android:textSize="20sp" />
+        </ScrollView>
+    </FrameLayout>
+
+    <ImageView
+        android:id="@+id/fileIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="19dp"
+        android:contentDescription="檔案圖示"
+        android:src="@drawable/ic_file"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/buttonRow" />
+
+    <TextView
+        android:id="@+id/resultLabelText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="3dp"
+        android:layout_marginTop="19dp"
+        android:text="判別結果"
+        android:textColor="#227D60"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@+id/fileIcon"
+        app:layout_constraintTop_toBottomOf="@+id/buttonRow" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

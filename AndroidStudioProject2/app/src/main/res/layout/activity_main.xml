@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EEF5F2"
+    tools:context=".MainActivity">
+
+    <!-- 說明圖示 -->
+    <ImageView
+        android:id="@+id/helpIcon"
+        android:layout_width="48dp"
+        android:layout_height="54dp"
+        android:layout_margin="16dp"
+        android:src="@drawable/ic_qmark"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Logo 圖示 -->
+
+    <!-- 標題文字 -->
+    <ImageView
+        android:id="@+id/logoIcon"
+        android:layout_width="101dp"
+        android:layout_height="93dp"
+        android:layout_marginTop="28dp"
+        android:src="@drawable/ic_tick"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/helpIcon" />
+
+    <!-- 截圖辨識按鈕 -->
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="騙局詐現"
+        android:textColor="#227D60"
+        android:textSize="54sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/logoIcon" />
+
+    <Button
+        android:id="@+id/btnImage"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="56dp"
+        android:layout_marginEnd="32dp"
+        android:background="@drawable/btn_square"
+        android:drawableLeft="@drawable/ic_screenshot"
+        android:drawablePadding="24dp"
+        android:gravity="center_vertical"
+        android:paddingStart="48dp"
+        android:text="截圖辨識"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
+
+
+    <Button
+        android:id="@+id/btnAudio"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="36dp"
+        android:layout_marginEnd="32dp"
+        android:background="@drawable/btn_square"
+        android:drawableLeft="@drawable/ic_mic"
+        android:drawablePadding="24dp"
+        android:gravity="center_vertical"
+        android:paddingStart="48dp"
+        android:text="錄音判別"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnImage" />
+
+    <Button
+        android:id="@+id/btnLink"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="36dp"
+        android:layout_marginEnd="32dp"
+        android:background="@drawable/btn_square"
+        android:drawableLeft="@drawable/ic_link"
+        android:drawablePadding="24dp"
+        android:gravity="center_vertical"
+        android:paddingStart="48dp"
+        android:text="網址檢查"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnAudio" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
