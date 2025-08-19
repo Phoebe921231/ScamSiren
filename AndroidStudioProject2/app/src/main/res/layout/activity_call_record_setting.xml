@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#EEF5F2"
+    tools:context=".CallRecordSettingActivity">
+
+    <TextView
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="62dp"
+        android:text="通話錄音設定教學"
+        android:textColor="#227D60"
+        android:textSize="42dp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 中間白底滑動區 -->
+    <ScrollView
+        android:id="@+id/scrollArea"
+        android:layout_width="324dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="16dp"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintBottom_toTopOf="@id/closeButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/privacyText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="6dp"
+            android:text="為了讓您在接到可疑來電時，能錄下對話內容並交由本 App 分析是否為詐騙，我們建議您開啟手機的內建通話錄音功能。\n以下整理各大手機品牌的設定教學，協助您快速開啟錄音功能：\n\n 各品牌手機教學\n• Samsung / Pixel / Motorola / Xiaomi\n 如何開啟通話錄音（AirDroid 教學）\nhttps://www.airdroid.com/zh-tw/parent-control/android-phone-call-recording/\n\n• ASUS\n ASUS 官方教學：通話錄音設定\nhttps://www.asus.com/tw/support/faq/1008348/\n\n• vivo\n vivo 官方教學：如何使用通話錄音\nhttps://www.vivo.com.cn/service/questions/all?categoryId=171&amp;questionId=1515\n\n• OPPO（ColorOS 11）\n OPPO 官方教學：啟用通話錄音功能\nhttps://www.coloros.com/instruction?id=622&amp;version=ColorOS%2011\n\n LINE 通話錄音\n若您經常透過 LINE 通話，也可以參考下方教學來啟用錄音功能：\n 如何錄製 LINE 通話（AirDroid 教學）\nhttps://www.airdroid.com/zh-tw/parent-control/line-call-recording/\n\n 若無內建錄音怎麼辦？推薦通話錄音 App\n若您的手機不支援內建錄音功能，也可以參考以下 App 推薦：\n 通話錄音 App 推薦（傑昇通訊）\nhttps://www.jyes.com.tw/news.php?act=view&amp;id=756\n 市面上通話錄音 App 評比（藍海 AI）\nhttps://lanhai-ai.com/blog/call-recording-recommendations-choose-the-best-call-recording-app/\n\n 注意事項\n• 錄音前請先徵得對方同意，避免觸法。\n• 部分手機品牌或型號可能因系統或區域限制不支援錄音功能，建議查閱手機官方說明或洽詢客服。"
+            android:textColor="#000000"
+            android:textSize="16sp"
+            android:autoLink="web"
+            android:linksClickable="true" />
+    </ScrollView>
+
+    <!-- 關閉按鈕 -->
+    <Button
+        android:id="@+id/closeButton"
+        android:layout_width="180dp"
+        android:layout_height="70dp"
+        android:layout_marginBottom="32dp"
+        android:background="@drawable/btn_square"
+        android:gravity="center"
+        android:text="關閉"
+        android:includeFontPadding="false"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

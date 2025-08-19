@@ -9,18 +9,29 @@
     tools:context=".MainActivity">
 
     <!-- 說明圖示 -->
+
     <ImageView
         android:id="@+id/helpIcon"
         android:layout_width="48dp"
         android:layout_height="54dp"
         android:layout_margin="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="12dp"
         android:src="@drawable/ic_qmark"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Logo 圖示 -->
+    <ImageView
+        android:id="@+id/lightIcon"
+        android:layout_width="52dp"
+        android:layout_height="54dp"
+        android:layout_margin="12dp"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="12dp"
+        android:src="@drawable/ic_light"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/helpIcon" />
 
-    <!-- 標題文字 -->
     <ImageView
         android:id="@+id/logoIcon"
         android:layout_width="101dp"

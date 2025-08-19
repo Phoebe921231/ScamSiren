@@ -13,9 +13,11 @@
         android:theme="@style/Theme.FP"
         tools:targetApi="31">
         <activity
+            android:name=".CallRecordSettingActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
-            android:exported="true">
-        </activity>
+            android:exported="true"></activity>
         <activity
             android:name=".UrlCheckActivity"
             android:exported="false" />
@@ -30,13 +32,13 @@
             android:exported="false" />
         <activity
             android:name=".ScreenshotActivity"
-            android:exported="false" />
-        <!-- ✅ S：設定為啟動頁 -->
+            android:exported="false" /> <!-- ✅ S：設定為啟動頁 -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

@@ -64,7 +64,7 @@
                 android:id="@+id/resultText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="（結果出來後才顯示）"
+                android:text="結果會顯示在這裡"
                 android:textColor="#227D60"
                 android:textSize="20sp"
                 android:gravity="start" />

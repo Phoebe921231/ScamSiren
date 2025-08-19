@@ -32,11 +32,15 @@ android {
 }
 
 dependencies {
-
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+
+    // 🟢 ML Kit OCR
+    implementation("com.google.mlkit:text-recognition:16.0.0-beta5")          // 英文、拉丁字母
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.0-beta5") // 中文 OCR
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

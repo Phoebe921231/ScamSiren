@@ -53,5 +53,13 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, activity_privacy_dialog.class); // 請確認類別名稱正確
             startActivity(intent);
         });
+
+        // 通話錄音教學圖示
+        ImageView lightIcon = findViewById(R.id.lightIcon);
+        lightIcon.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, CallRecordSettingActivity.class);
+            startActivity(intent);
+        });
+
     }
 }
