@@ -9,7 +9,6 @@
     android:background="#EEF5F2"
     tools:context=".AudioRecognitionActivity">
 
-    <!-- 返回箭頭 -->
     <ImageView
         android:id="@+id/backArrow"
         android:layout_width="50dp"
@@ -21,7 +20,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 標題 -->
     <TextView
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
@@ -35,7 +33,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- 上傳錄音檔區塊 -->
     <FrameLayout
         android:id="@+id/micContainer"
         android:layout_width="330dp"
@@ -56,10 +53,47 @@
             android:src="@drawable/ic_mic2"
             android:scaleType="centerInside"
             android:contentDescription="麥克風圖示" />
+
+        <LinearLayout
+            android:id="@+id/audioSelectedGroup"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_inner_green_box"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_file"
+                android:contentDescription="檔案" />
+
+            <TextView
+                android:id="@+id/selectedFileName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="#227D60"
+                android:textSize="18sp"
+                tools:text="test.m4a" />
+
+            <ImageButton
+                android:id="@+id/playPauseBtn"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="播放"
+                android:src="@android:drawable/ic_media_play" />
+        </LinearLayout>
     </FrameLayout>
 
-
-    <!-- 並排按鈕 -->
     <LinearLayout
         android:id="@+id/buttonRow"
         android:layout_width="wrap_content"
@@ -92,57 +126,6 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 判別結果標題區塊 -->
-    <LinearLayout
-        android:id="@+id/resultLabel"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/buttonRow"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-    </LinearLayout>
-
-    <!-- 判別結果區塊 -->
-
-    <FrameLayout
-        android:id="@+id/resultContainer"
-        android:layout_width="330dp"
-        android:layout_height="290dp"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/bg_outer_white_box"
-        android:padding="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.506"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/resultLabelText">
-
-        <!-- 綠框背景 -->
-        <View
-            android:id="@+id/greenBox"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/bg_inner_green_box" />
-
-        <!-- 可垂直滑動的文字區塊 -->
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:padding="12dp">
-
-            <TextView
-                android:id="@+id/resultText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="start"
-                android:text="結果會顯示在這裡"
-                android:textColor="#227D60"
-                android:textSize="20sp" />
-        </ScrollView>
-    </FrameLayout>
-
     <ImageView
         android:id="@+id/fileIcon"
         android:layout_width="40dp"
@@ -166,5 +149,39 @@
         android:textStyle="bold"
         app:layout_constraintStart_toEndOf="@+id/fileIcon"
         app:layout_constraintTop_toBottomOf="@+id/buttonRow" />
+
+    <FrameLayout
+        android:id="@+id/resultContainer"
+        android:layout_width="330dp"
+        android:layout_height="290dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_outer_white_box"
+        android:padding="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.506"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/resultLabelText">
+
+        <View
+            android:id="@+id/greenBox"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_inner_green_box" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/resultText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="start"
+                android:text="結果會顯示在這裡"
+                android:textColor="#227D60"
+                android:textSize="20sp" />
+        </ScrollView>
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

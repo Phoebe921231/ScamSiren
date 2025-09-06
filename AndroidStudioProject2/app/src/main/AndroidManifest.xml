@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+    package="com.example.fp2">
+
+    <!-- 網路權限：連線到 urlscan.io 與本機/雲端後端 -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -11,37 +14,25 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.FP"
-        tools:targetApi="31">
-        <activity
-            android:name=".CallRecordSettingActivity"
-            android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"></activity>
-        <activity
-            android:name=".UrlCheckActivity"
-            android:exported="false" />
-        <activity
-            android:name=".AudioRecognitionActivity"
-            android:exported="false" />
-        <activity
-            android:name=".activity_privacy_dialog"
-            android:exported="false" />
-        <activity
-            android:name=".ResultActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ScreenshotActivity"
-            android:exported="false" /> <!-- ✅ S：設定為啟動頁 -->
+        android:usesCleartextTraffic="true">
+
+        <!-- 無 intent-filter 的 Activity 不需設定 exported -->
+        <activity android:name=".CallRecordSettingActivity" />
+        <activity android:name=".MainActivity" />
+        <activity android:name=".UrlCheckActivity" />
+        <activity android:name=".AudioRecognitionActivity" />
+        <activity android:name=".ResultActivity" />
+        <activity android:name=".ScreenshotActivity" />
+
+        <!-- 啟動頁（有 intent-filter 必須設 exported="true"） -->
         <activity
             android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-    </application>
 
+    </application>
 </manifest>
