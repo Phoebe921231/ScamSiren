@@ -1,0 +1,21 @@
+﻿{
+  "advices": [
+    "請確認 OLLAMA_HOST 或稍後再試。"
+  ],
+  "analysis": {
+    "actions_requested": [],
+    "confidence": 0.1,
+    "matched_categories": []
+  },
+  "is_scam": false,
+  "meta": {
+    "asr_backend": "whisper",
+    "asr_model": "small",
+    "ollama_model": "scam-guard"
+  },
+  "reasons": [
+    "Ollama 連線失敗: HTTPConnectionPool(host='127.0.0.1', port=11434): Read timed out. (read timeout=20.0)"
+  ],
+  "risk": "low",
+  "text": ""
+}
