@@ -3,14 +3,15 @@ package com.example.fp2.net;
 import java.util.concurrent.TimeUnit;
 import okhttp3.OkHttpClient;
 
-public class ApiClient {
+public final class ApiClient {
     private static OkHttpClient client;
-    public static OkHttpClient get() {
-        if (client == null) {
-            client = new OkHttpClient.Builder()
-                    .connectTimeout(5, TimeUnit.SECONDS)
-                    .readTimeout(120, TimeUnit.SECONDS)
-                    .writeTimeout(120, TimeUnit.SECONDS)
+    private ApiClient(){}
+    public static OkHttpClient get(){
+        if(client==null){
+            client=new OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
                     .retryOnConnectionFailure(true)
                     .build();
         }

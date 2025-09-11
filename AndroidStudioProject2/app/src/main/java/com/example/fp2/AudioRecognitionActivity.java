@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
-import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -23,10 +22,10 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.fp2.model.ApiResponse;
+import com.example.fp2.model.ResultFormatter;
 import com.example.fp2.net.BackendService;
 
 import java.io.IOException;
-import java.util.Locale;
 
 public class AudioRecognitionActivity extends AppCompatActivity {
 
@@ -46,9 +45,9 @@ public class AudioRecognitionActivity extends AppCompatActivity {
     private boolean isPrepared = false;
 
     private final ActivityResultLauncher<Intent> pickAudioLocal =
-            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    Uri uri = result.getData().getData();
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
+                if (r.getResultCode() == RESULT_OK && r.getData() != null) {
+                    Uri uri = r.getData().getData();
                     if (uri != null) {
                         try {
                             getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -106,7 +105,6 @@ public class AudioRecognitionActivity extends AppCompatActivity {
 
         selectAudioButton.setOnClickListener(this::onPickAudioClicked);
         startRecognitionButton.setOnClickListener(this::onStartRecognitionClicked);
-
         playPauseBtn.setOnClickListener(v -> togglePlay());
     }
 
@@ -156,37 +154,15 @@ public class AudioRecognitionActivity extends AppCompatActivity {
             }
             @Override public void onError(String message) {
                 runOnUiThread(() -> {
-                    resultText.setText("");
-                    toast("錯誤：" + message);
+                    resultText.setText("錯誤: " + message);
                     setButtonsEnabled(true);
                 });
             }
         });
     }
 
-    private void renderResult(ApiResponse res) {
-        if (res == null) {
-            toast("空回應");
-            return;
-        }
-        String risk = res.risk;
-        if (risk == null || "null".equalsIgnoreCase(risk) || risk.trim().isEmpty()) {
-            risk = "low";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append(res.is_scam ? "⚠️ 可能詐騙\n" : "✅ 低風險\n");
-        sb.append("風險：").append(risk).append('\n');
-
-        if (res.reasons != null && !res.reasons.isEmpty()) {
-            sb.append("理由：").append(TextUtils.join("、", res.reasons)).append('\n');
-        }
-        if (res.advices != null && !res.advices.isEmpty()) {
-            sb.append("建議：").append(TextUtils.join("、", res.advices)).append('\n');
-        } else if (!res.is_scam || "low".equalsIgnoreCase(risk)) {
-            sb.append("提醒：雖然系統判定風險較低，若仍有疑慮可撥打 165 反詐騙專線或聯繫銀行客服查證。\n");
-        }
-
-        resultText.setText(sb.toString());
+    private void renderResult(ApiResponse r) {
+        resultText.setText(ResultFormatter.format(r));
     }
 
     private void showSelectedAudioUi(String name) {
@@ -196,8 +172,7 @@ public class AudioRecognitionActivity extends AppCompatActivity {
     }
 
     private String getDisplayName(Uri uri) {
-        String s = FileUtils.displayName(this, uri);
-        return s;
+        return FileUtils.displayName(this, uri);
     }
 
     private void preparePlayer(Uri uri) {
@@ -245,5 +220,4 @@ public class AudioRecognitionActivity extends AppCompatActivity {
         Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 }
-
 

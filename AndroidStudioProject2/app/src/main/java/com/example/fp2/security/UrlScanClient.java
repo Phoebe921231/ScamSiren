@@ -1,355 +1,306 @@
 package com.example.fp2.security;
 
-import com.google.gson.*;
-
+import android.util.Log;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
-import okhttp3.*;
-
-/**
- * UrlScanClient
- * - evaluate(url): 先 search（精準），再 domain 搜尋，最後 scan + poll
- * - poll：404 時會去 /api/v1/scan/{uuid}/ 查狀態（queued/processing/done）
- */
 public class UrlScanClient {
-
-    private static final String BASE = "https://urlscan.io";
-    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-
-    // 輪詢設定：最多 12 次、每次間隔 3 秒（約 36 秒）
-    private static final int POLL_MAX = 12;
-    private static final int POLL_INTERVAL_MS = 3000;
-
-    private final OkHttpClient http;
-    private final Gson gson = new GsonBuilder().create();
-    private final String apiKey;
 
     public interface Callback {
         void onSuccess(RiskResult result);
         void onFailure(String message);
     }
 
+    private static final String TAG = "UrlScanClient";
+    private static final String BASE = "https://urlscan.io/api/v1";
+    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
+    private final OkHttpClient http;
+    private final String apiKey;
+
+    private static final int MAX_POLLS = 15;
+    private static final long POLL_SLEEP_MS = 1500;
+
     public UrlScanClient(String apiKey) {
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.http = new OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .callTimeout(45, TimeUnit.SECONDS)
-                .build();
+        this.apiKey = apiKey == null ? "" : apiKey;
+        this.http = new OkHttpClient.Builder().retryOnConnectionFailure(true).build();
     }
 
-    /** 對外：search 精準→search domain→scan+poll */
-    public void evaluate(String url, Callback cb) {
-        searchExact(url, new Callback() {
-            @Override public void onSuccess(RiskResult result) {
-                cb.onSuccess(result);
+    public void evaluate(String targetUrl, Callback cb) {
+        new Thread(() -> {
+            try {
+                RiskResult rr = evaluateBlocking(targetUrl);
+                if (rr != null) cb.onSuccess(rr);
+                else cb.onFailure("無法取得結果");
+            } catch (Exception e) {
+                Log.e(TAG, "evaluate error", e);
+                cb.onFailure("發生錯誤：" + e.getMessage());
             }
-            @Override public void onFailure(String msg) {
-                // fallback：用 domain 搜索（時間拉長，命中率高一些）
-                String host = extractHost(url);
-                if (host == null || host.isEmpty()) {
-                    scanAndPoll(url, cb);
-                    return;
-                }
-                searchByDomain(host, new Callback() {
-                    @Override public void onSuccess(RiskResult result) {
-                        cb.onSuccess(result);
-                    }
-                    @Override public void onFailure(String msg2) {
-                        scanAndPoll(url, cb);
-                    }
-                });
+        }).start();
+    }
+
+    private RiskResult evaluateBlocking(String targetUrl) throws Exception {
+        JSONObject resultJson = fetchLatestResult(targetUrl);
+        if (!isStrong(resultJson) && hasKey()) {
+            String uuid = postScan(targetUrl);
+            if (uuid != null) {
+                JSONObject polled = pollResult(uuid);
+                if (isVerdictReady(polled)) resultJson = polled;
             }
-        });
+        }
+        if (resultJson == null) return new RiskResult(targetUrl, "未知", 0, listOf("無可用結果"), "", "");
+        return parseRisk(targetUrl, resultJson);
     }
 
-    /** 精準 URL 搜尋（近 30 天） */
-    private void searchExact(String url, Callback cb) {
-        try {
-            String q = "page.url:\"" + url + "\" AND date:>now-30d";
-            String full = BASE + "/api/v1/search/?q=" + URLEncoder.encode(q, "UTF-8") + "&size=1";
-            Request.Builder rb = new Request.Builder().url(full).get();
-            if (!apiKey.isEmpty()) rb.header("API-Key", apiKey);
+    private JSONObject fetchLatestResult(String url) throws IOException, JSONException {
+        String q1 = "task.url:\"" + url + "\"";
+        JSONObject s1 = getJson(BASE + "/search/?q=" + enc(q1) + "&size=1&sort=desc");
+        JSONObject r = extractResult(s1);
+        if (r != null && isVerdictReady(r)) return r;
+        String q2 = "page.url:\"" + url + "\"";
+        JSONObject s2 = getJson(BASE + "/search/?q=" + enc(q2) + "&size=1&sort=desc");
+        return extractResult(s2);
+    }
 
-            http.newCall(rb.build()).enqueue(new okhttp3.Callback() {
-                @Override public void onFailure(Call call, IOException e) {
-                    cb.onFailure("search 失敗：" + e.getMessage());
-                }
-                @Override public void onResponse(Call call, Response resp) {
-                    try (Response r = resp) {
-                        if (!r.isSuccessful()) {
-                            cb.onFailure("search 狀態碼：" + r.code());
-                            return;
-                        }
-                        String body = r.body() != null ? r.body().string() : "";
-                        JsonObject root = JsonParser.parseString(body).getAsJsonObject();
-                        JsonArray results = root.has("results") && root.get("results").isJsonArray()
-                                ? root.getAsJsonArray("results") : new JsonArray();
-                        if (results.size() == 0) {
-                            cb.onFailure("search 無結果");
-                            return;
-                        }
-                        JsonObject first = results.get(0).getAsJsonObject();
-                        cb.onSuccess(parseRiskFromResult(first, url));
-                    } catch (Exception ex) {
-                        cb.onFailure("search 解析錯誤：" + ex.getMessage());
-                    }
-                }
-            });
-        } catch (Exception e) {
-            cb.onFailure("search 構造失敗：" + e.getMessage());
+    private JSONObject extractResult(JSONObject search) throws IOException, JSONException {
+        if (search == null) return null;
+        JSONArray results = search.optJSONArray("results");
+        if (results == null || results.length() == 0) return null;
+        JSONObject first = results.optJSONObject(0);
+        if (first == null) return null;
+        String resultLink = first.optString("result", null);
+        String uuid = first.optString("_id", null);
+        if (uuid == null) {
+            JSONObject task = first.optJSONObject("task");
+            if (task != null) uuid = task.optString("uuid", null);
+        }
+        if (resultLink != null) return getJson(resultLink);
+        if (uuid != null) return getJson(BASE + "/result/" + uuid + "/");
+        return null;
+    }
+
+    private boolean hasKey() {
+        return apiKey != null && !apiKey.trim().isEmpty();
+    }
+
+    private JSONObject getJson(String url) throws IOException, JSONException {
+        Request req = new Request.Builder().url(url).header("User-Agent", "fp2-urlscan/1.0").build();
+        try (Response resp = http.newCall(req).execute()) {
+            if (!resp.isSuccessful()) return null;
+            String body = resp.body() != null ? resp.body().string() : null;
+            return body != null ? new JSONObject(body) : null;
         }
     }
 
-    /** 以網域搜尋（近 90 天），提高命中率 */
-    private void searchByDomain(String host, Callback cb) {
-        try {
-            String plain = stripWWW(host);
-            String q = "page.domain:\"" + plain + "\" AND date:>now-90d";
-            String full = BASE + "/api/v1/search/?q=" + URLEncoder.encode(q, "UTF-8") + "&size=1";
-            Request.Builder rb = new Request.Builder().url(full).get();
-            if (!apiKey.isEmpty()) rb.header("API-Key", apiKey);
-
-            http.newCall(rb.build()).enqueue(new okhttp3.Callback() {
-                @Override public void onFailure(Call call, IOException e) {
-                    cb.onFailure("search(domain) 失敗：" + e.getMessage());
-                }
-                @Override public void onResponse(Call call, Response resp) {
-                    try (Response r = resp) {
-                        if (!r.isSuccessful()) {
-                            cb.onFailure("search(domain) 狀態碼：" + r.code());
-                            return;
-                        }
-                        String body = r.body() != null ? r.body().string() : "";
-                        JsonObject root = JsonParser.parseString(body).getAsJsonObject();
-                        JsonArray results = root.has("results") && root.get("results").isJsonArray()
-                                ? root.getAsJsonArray("results") : new JsonArray();
-                        if (results.size() == 0) {
-                            cb.onFailure("search(domain) 無結果");
-                            return;
-                        }
-                        JsonObject first = results.get(0).getAsJsonObject();
-                        // 傳回時仍帶原始 URL 作為顯示
-                        cb.onSuccess(parseRiskFromResult(first, "https://" + plain + "/"));
-                    } catch (Exception ex) {
-                        cb.onFailure("search(domain) 解析錯誤：" + ex.getMessage());
-                    }
-                }
-            });
-        } catch (Exception e) {
-            cb.onFailure("search(domain) 構造失敗：" + e.getMessage());
-        }
-    }
-
-    /** 提交掃描並輪詢結果 */
-    private void scanAndPoll(String url, Callback cb) {
-        if (apiKey.isEmpty()) {
-            cb.onFailure("未設定 URLScan API Key");
-            return;
-        }
-        String endpoint = BASE + "/api/v1/scan/";
-        JsonObject payload = new JsonObject();
-        payload.addProperty("url", url);
-        payload.addProperty("visibility", "unlisted");
-
-        Request req = new Request.Builder()
-                .url(endpoint)
+    private String postScan(String targetUrl) throws IOException, JSONException {
+        JSONObject payload = new JSONObject();
+        payload.put("url", targetUrl);
+        payload.put("visibility", "public");
+        Request.Builder b = new Request.Builder()
+                .url(BASE + "/scan/")
                 .post(RequestBody.create(payload.toString(), JSON))
-                .header("Content-Type", "application/json")
-                .header("API-Key", apiKey)
-                .build();
-
-        http.newCall(req).enqueue(new okhttp3.Callback() {
-            @Override public void onFailure(Call call, IOException e) {
-                cb.onFailure("scan 失敗：" + e.getMessage());
-            }
-            @Override public void onResponse(Call call, Response resp) {
-                try (Response r = resp) {
-                    if (!r.isSuccessful()) {
-                        cb.onFailure("scan 狀態碼：" + r.code());
-                        return;
-                    }
-                    String body = r.body() != null ? r.body().string() : "";
-                    JsonObject root = JsonParser.parseString(body).getAsJsonObject();
-                    String uuid = root.has("uuid") ? root.get("uuid").getAsString() : null;
-                    if (uuid == null || uuid.isEmpty()) {
-                        cb.onFailure("scan 未取得 uuid");
-                        return;
-                    }
-                    pollResult(uuid, url, 0, cb);
-                } catch (Exception e) {
-                    cb.onFailure("scan 解析錯誤：" + e.getMessage());
-                }
-            }
-        });
-    }
-
-    /** 每 POLL_INTERVAL_MS 秒輪詢一次，最多 POLL_MAX 次；404 會先查狀態 */
-    private void pollResult(String uuid, String url, int attempt, Callback cb) {
-        if (attempt >= POLL_MAX) {
-            cb.onFailure("結果未就緒（uuid=" + uuid + "）");
-            return;
+                .header("User-Agent", "fp2-urlscan/1.0")
+                .header("Content-Type", "application/json");
+        if (hasKey()) b.header("API-Key", apiKey);
+        Request req = b.build();
+        try (Response resp = http.newCall(req).execute()) {
+            if (!resp.isSuccessful()) return null;
+            String body = resp.body() != null ? resp.body().string() : null;
+            if (body == null) return null;
+            JSONObject o = new JSONObject(body);
+            return o.optString("uuid", null);
         }
-        String endpoint = BASE + "/api/v1/result/" + uuid + "/";
-
-        Request.Builder rb = new Request.Builder().url(endpoint).get();
-        if (!apiKey.isEmpty()) rb.header("API-Key", apiKey);
-
-        http.newCall(rb.build()).enqueue(new okhttp3.Callback() {
-            @Override public void onFailure(Call call, IOException e) {
-                cb.onFailure("poll 失敗：" + e.getMessage());
-            }
-            @Override public void onResponse(Call call, Response resp) {
-                try (Response r = resp) {
-                    if (r.code() == 404) {
-                        // 結果檔未生成，先查狀態，再決定是否繼續等
-                        pollStatusThenRetry(uuid, url, attempt, cb);
-                        return;
-                    }
-                    if (!r.isSuccessful()) {
-                        cb.onFailure("poll 狀態碼：" + r.code());
-                        return;
-                    }
-                    String body = r.body() != null ? r.body().string() : "";
-                    JsonObject root = JsonParser.parseString(body).getAsJsonObject();
-                    cb.onSuccess(parseRiskFromResult(root, url));
-                } catch (Exception e) {
-                    cb.onFailure("poll 解析錯誤：" + e.getMessage());
-                }
-            }
-        });
     }
 
-    /** 查詢掃描狀態（/api/v1/scan/{uuid}/），若未完成則等待後重試 result */
-    private void pollStatusThenRetry(String uuid, String url, int attempt, Callback cb) {
-        String statusEndpoint = BASE + "/api/v1/scan/" + uuid + "/";
-
-        Request.Builder rb = new Request.Builder().url(statusEndpoint).get();
-        if (!apiKey.isEmpty()) rb.header("API-Key", apiKey);
-
-        http.newCall(rb.build()).enqueue(new okhttp3.Callback() {
-            @Override public void onFailure(Call call, IOException e) {
-                // 查狀態失敗也照節奏等待再試
-                sleepQuiet(POLL_INTERVAL_MS);
-                pollResult(uuid, url, attempt + 1, cb);
-            }
-            @Override public void onResponse(Call call, Response resp) {
-                try (Response r = resp) {
-                    boolean shouldWait = true;
-                    if (r.isSuccessful()) {
-                        String body = r.body() != null ? r.body().string() : "";
-                        try {
-                            JsonObject o = JsonParser.parseString(body).getAsJsonObject();
-                            String status = o.has("status") ? o.get("status").getAsString() : "";
-                            // 常見：submitted / queued / processing / finished / done
-                            if ("done".equalsIgnoreCase(status) || "finished".equalsIgnoreCase(status)) {
-                                shouldWait = false; // 已完成，直接去抓 result
-                            }
-                        } catch (Exception ignore) {}
-                    }
-                    if (shouldWait) sleepQuiet(POLL_INTERVAL_MS);
-                    pollResult(uuid, url, attempt + 1, cb);
-                } catch (Exception e) {
-                    sleepQuiet(POLL_INTERVAL_MS);
-                    pollResult(uuid, url, attempt + 1, cb);
-                }
-            }
-        });
+    private JSONObject pollResult(String uuid) throws IOException, JSONException, InterruptedException {
+        String url = BASE + "/result/" + uuid + "/";
+        JSONObject latest = null;
+        for (int i = 0; i < MAX_POLLS; i++) {
+            latest = getJson(url);
+            if (isVerdictReady(latest)) return latest;
+            Thread.sleep(POLL_SLEEP_MS);
+        }
+        return latest;
     }
 
-    // ===== 解析與小工具 =====
+    private boolean isVerdictReady(JSONObject result) {
+        if (result == null) return false;
+        JSONObject verdicts = result.optJSONObject("verdicts");
+        if (verdicts == null) return false;
+        JSONObject overall = verdicts.optJSONObject("overall");
+        JSONObject engines = verdicts.optJSONObject("engines");
+        JSONObject urlscanV = verdicts.optJSONObject("urlscan");
+        boolean hasOverall = overall != null && (overall.has("score") || overall.has("malicious")
+                || (overall.optJSONArray("categories") != null && overall.optJSONArray("categories").length() > 0)
+                || (overall.optJSONArray("tags") != null && overall.optJSONArray("tags").length() > 0));
+        boolean hasEngines = engines != null && engines.length() > 0;
+        boolean hasUrlscanScore = urlscanV != null && urlscanV.has("score");
+        return hasOverall || hasEngines || hasUrlscanScore;
+    }
 
-    /** 將 urlscan 回應轉為 RiskResult（search / result 皆可） */
-    private RiskResult parseRiskFromResult(JsonObject src, String fallbackUrl) {
-        String url = fallbackUrl;
-        try {
-            if (src.has("page")) {
-                JsonObject page = src.getAsJsonObject("page");
-                if (page.has("url")) url = page.get("url").getAsString();
-            } else if (src.has("task")) {
-                JsonObject task = src.getAsJsonObject("task");
-                if (task.has("url")) url = task.get("url").getAsString();
-            }
-        } catch (Exception ignored) {}
+    private boolean isStrong(JSONObject result) {
+        if (!isVerdictReady(result)) return false;
+        JSONObject verdicts = result.optJSONObject("verdicts");
+        JSONObject overall = verdicts != null ? verdicts.optJSONObject("overall") : null;
+        JSONObject engines = verdicts != null ? verdicts.optJSONObject("engines") : null;
+        if (overall != null && overall.optBoolean("malicious", false)) return true;
+        if (engines != null && engines.length() > 0) return true;
+        JSONArray cats = overall != null ? overall.optJSONArray("categories") : null;
+        JSONArray tags = overall != null ? overall.optJSONArray("tags") : null;
+        return containsAny(cats, "phishing", "malware") || containsAny(tags, "phishing", "malware");
+    }
 
+    private boolean containsAny(JSONArray arr, String... keys) {
+        if (arr == null) return false;
+        for (int i = 0; i < arr.length(); i++) {
+            String s = arr.optString(i, "").toLowerCase();
+            for (String k : keys) if (s.contains(k)) return true;
+        }
+        return false;
+    }
+
+    private RiskResult parseRisk(String targetUrl, JSONObject result) {
         List<String> reasons = new ArrayList<>();
-        int score = -1;
-        String verdict = "未知";
-        boolean malicious = false;
+        JSONObject verdicts = result.optJSONObject("verdicts");
+        JSONObject overall  = verdicts != null ? verdicts.optJSONObject("overall")  : null;
+        JSONObject engines  = verdicts != null ? verdicts.optJSONObject("engines")  : null;
+        JSONObject urlscanV = verdicts != null ? verdicts.optJSONObject("urlscan")  : null;
 
-        try {
-            if (src.has("verdicts") && src.get("verdicts").isJsonObject()) {
-                JsonObject v = src.getAsJsonObject("verdicts");
+        boolean overallMal = overall != null && overall.optBoolean("malicious", false);
+        int overallScore    = overall != null ? overall.optInt("score", 0) : 0;
 
-                // overall
-                if (v.has("overall") && v.get("overall").isJsonObject()) {
-                    JsonObject ov = v.getAsJsonObject("overall");
-                    if (ov.has("malicious")) malicious = ov.get("malicious").getAsBoolean();
-                    if (ov.has("score")) score = safeInt(ov, "score", -1);
-                    if (ov.has("categories") && ov.get("categories").isJsonArray()) {
-                        for (JsonElement e : ov.getAsJsonArray("categories")) {
-                            reasons.add("分類：" + e.getAsString());
-                        }
-                    }
-                }
+        List<String> kinds = new ArrayList<>();
+        if (overall != null) {
+            JSONArray cats = overall.optJSONArray("categories");
+            if (cats != null && cats.length() > 0) {
+                reasons.add("Categories: " + cats.toString());
+                kinds.addAll(toKeys(cats));
+            }
+            JSONArray tags = overall.optJSONArray("tags");
+            if (tags != null && tags.length() > 0) {
+                reasons.add("Tags: " + tags.toString());
+                kinds.addAll(toKeys(tags));
+            }
+        }
 
-                // engines 匯總
-                if (v.has("engines") && v.get("engines").isJsonObject()) {
-                    JsonObject eng = v.getAsJsonObject("engines");
-                    if (eng.has("malicious")) {
-                        int m = safeInt(eng, "malicious", 0);
-                        if (m > 0) reasons.add("安全引擎判為惡意數：" + m);
-                        if (m >= 1) malicious = true;
-                        if (score < 0) score = Math.min(100, 60 + m * 10);
-                    }
-                }
-
-                // urlscan 自身分數
-                if (v.has("urlscan") && v.get("urlscan").isJsonObject()) {
-                    JsonObject us = v.getAsJsonObject("urlscan");
-                    if (us.has("score")) {
-                        int s = safeInt(us, "score", -1);
-                        if (s >= 0) score = s;
-                    }
+        boolean anyEngineMal = false;
+        if (engines != null) {
+            Iterator<String> it = engines.keys();
+            List<String> hits = new ArrayList<>();
+            while (it.hasNext()) {
+                String key = it.next();
+                JSONObject e = engines.optJSONObject(key);
+                if (e != null && e.optBoolean("malicious", false)) {
+                    anyEngineMal = true;
+                    hits.add(key);
                 }
             }
-        } catch (Exception e) {
-            reasons.add("結果解析警告：" + e.getMessage());
+            if (!hits.isEmpty()) reasons.add("Engines 命中: " + join(", ", hits));
         }
 
-        if (score < 0) score = malicious ? 85 : 30;
-        verdict = malicious ? "高風險" : (score >= 50 ? "中風險" : "低風險");
-        if (reasons.isEmpty()) reasons.add("未見明確惡意跡象（建議仍留意）");
-        return new RiskResult(url, verdict, score, reasons);
-    }
+        int urlscanScore = urlscanV != null ? urlscanV.optInt("score", 0) : 0;
+        int score = Math.max(overallScore, urlscanScore);
 
-    private int safeInt(JsonObject obj, String key, int def) {
-        try { return obj.get(key).getAsInt(); } catch (Exception e) { return def; }
-    }
-
-    private void sleepQuiet(int ms) {
-        try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
-    }
-
-    private String extractHost(String url) {
-        try {
-            URI u = URI.create(url);
-            String host = u.getHost();
-            return host == null ? null : host.toLowerCase();
-        } catch (Exception e) {
-            return null;
+        String verdict;
+        if (overallMal || anyEngineMal || hasKind(kinds, "phishing") || hasKind(kinds, "malware")) {
+            verdict = "高風險";
+            score = Math.max(score, 80);
+        } else if (score >= 40) {
+            verdict = "中風險";
+        } else {
+            verdict = "安全";
         }
+
+        String summary = buildSummary(verdict, kinds);
+        String advice  = buildAdvice(verdict, kinds);
+
+        if (reasons.isEmpty()) reasons.add("未見引擎惡意命中；請留意上下文並持續監控");
+        return new RiskResult(targetUrl, verdict, score, reasons, summary, advice);
     }
 
-    private String stripWWW(String host) {
-        if (host == null) return null;
-        return host.startsWith("www.") ? host.substring(4) : host;
+    private static List<String> toKeys(JSONArray arr) {
+        LinkedHashSet<String> set = new LinkedHashSet<>();
+        if (arr == null) return new ArrayList<>();
+        for (int i = 0; i < arr.length(); i++) {
+            String s = arr.optString(i, "").trim().toLowerCase();
+            if (!s.isEmpty()) set.add(s);
+        }
+        return new ArrayList<>(set);
+    }
+
+    private static boolean hasKind(List<String> kinds, String key) {
+        for (String k : kinds) if (k.contains(key)) return true;
+        return false;
+    }
+
+    private static String zhKind(String k) {
+        if (k.contains("phishing")) return "釣魚";
+        if (k.contains("malware_download") || k.equals("malware")) return "惡意軟體";
+        if (k.contains("scam") || k.contains("fraud")) return "詐騙";
+        if (k.contains("defacement")) return "網頁竄改";
+        if (k.contains("suspicious")) return "可疑活動";
+        if (k.contains("adult") || k.contains("porn")) return "成人內容";
+        if (k.contains("crypto")) return "加密貨幣相關";
+        return k;
+    }
+
+    private static String buildSummary(String verdict, List<String> kinds) {
+        List<String> zh = new ArrayList<>();
+        for (String k : kinds) {
+            String t = zhKind(k);
+            if (!zh.contains(t)) zh.add(t);
+        }
+        String type = zh.isEmpty() ? "一般風險" : join("、", zh);
+        if ("高風險".equals(verdict)) return "判定為高風險，疑似：" + type + "。";
+        if ("中風險".equals(verdict)) return "判定為中風險，疑似：" + type + "。";
+        if ("安全".equals(verdict))  return "判定為安全網址。";
+        return "風險等級未知。";
+    }
+
+    private static String buildAdvice(String verdict, List<String> kinds) {
+        String high = "請勿開啟或互動，立即關閉頁面。不要登入、不要輸入個資或一次性驗證碼，不下載檔案、不掃描 QR，改由本人主動透過官方網站或 165 查證。";
+        String mid  = "不要輸入帳密或驗證碼、不要下載或安裝，建議關閉頁面並改以官方管道查證。";
+        String safe = "屬安全網址，但仍建議避免輸入一次性驗證碼或下載不明檔案；如有疑慮改以官方管道查證。";
+        String extra = "";
+        if (hasKind(kinds, "phishing")) extra += "常見為偽裝登入或客服頁以竊取帳密與一次性驗證碼。";
+        if (hasKind(kinds, "malware"))  extra += "可能誘導下載安裝，造成裝置被控或資料外洩。";
+        if (hasKind(kinds, "scam") || hasKind(kinds, "fraud")) extra += "可能引導轉帳、加好友或要求掃碼付款。";
+        if (hasKind(kinds, "defacement")) extra += "網站內容可能遭竄改，資訊不可信。";
+        if ("高風險".equals(verdict)) return high + extra;
+        if ("中風險".equals(verdict)) return mid + extra;
+        if ("安全".equals(verdict))  return safe;
+        return safe;
+    }
+
+    private static List<String> listOf(String s) {
+        List<String> l = new ArrayList<>();
+        l.add(s);
+        return l;
+    }
+
+    private static String join(String sep, List<String> items) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(sep);
+            sb.append(items.get(i));
+        }
+        return sb.toString();
+    }
+
+    private static String enc(String s) throws java.io.UnsupportedEncodingException {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8.name());
     }
 }
-
-

@@ -1,5 +1,6 @@
 package com.example.fp2.model;
 
+import com.google.gson.JsonElement;
 import java.util.List;
 
 public class ApiResponse {
@@ -7,12 +8,14 @@ public class ApiResponse {
     public String risk;
     public List<String> reasons;
     public List<String> advices;
-    public Analysis analysis;
+    public JsonElement analysis;
+    public String text;
+    public Meta meta;
 
-    public static class Analysis {
-        public double confidence;
-        public List<String> matched_categories;
-        public List<String> actions_requested;
+    public static class Meta{
+        public String asr_backend;
+        public String ollama_model;
+        public String request_id;
     }
 }
 

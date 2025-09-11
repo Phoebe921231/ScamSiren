@@ -39,7 +39,6 @@ public class UrlCheckActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_url_check);
 
-        // 邊距設定（對應 layout 根節點 id: main）
         View root = findViewById(R.id.main);
         if (root != null) {
             ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
@@ -49,7 +48,6 @@ public class UrlCheckActivity extends AppCompatActivity {
             });
         }
 
-        // 返回箭頭
         ImageView backArrow = findViewById(R.id.backArrow);
         if (backArrow != null) {
             backArrow.setOnClickListener(v -> {
@@ -83,7 +81,7 @@ public class UrlCheckActivity extends AppCompatActivity {
         startCheckButton.setText("檢查中…");
         resultText.setText("找到 " + urls.size() + " 個連結，開始檢查（urlscan）…\n");
 
-        String apiKey = BuildConfig.URLSCAN_API_KEY; // 從 local.properties 注入
+        String apiKey = BuildConfig.URLSCAN_API_KEY;
         UrlScanClient client = new UrlScanClient(apiKey);
 
         AtomicInteger done = new AtomicInteger(0);
@@ -107,7 +105,12 @@ public class UrlCheckActivity extends AppCompatActivity {
             StringBuilder sb = new StringBuilder(resultText.getText());
             sb.append("\n• ").append(add.url).append("\n")
                     .append("  風險：").append(add.verdict).append("（").append(add.score).append("/100）\n");
-            for (String r : add.reasons) sb.append("    - ").append(r).append("\n");
+            if (!add.summary.isEmpty()) sb.append("  摘要：").append(add.summary).append("\n");
+            if (!add.advice.isEmpty())  sb.append("  建議：").append(add.advice).append("\n");
+            for (String r : add.reasons) {
+                if (r.startsWith("Categories:") || r.startsWith("Tags:")) continue;
+                sb.append("    - ").append(r).append("\n");
+            }
             resultText.setText(sb.toString());
 
             if (finished == total) {
@@ -122,13 +125,11 @@ public class UrlCheckActivity extends AppCompatActivity {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
-    /** 從文字中抽出 URL，支援一次多條；也接受只有網域的情況 */
     private List<String> extractUrls(String text) {
         LinkedHashSet<String> set = new LinkedHashSet<>();
         Matcher m = Patterns.WEB_URL.matcher(text);
         while (m.find()) {
             String found = m.group();
-            // 去掉尾端標點
             found = found.replaceAll("[\\u3002\\uFF0C,.;:]+$", "");
             set.add(found);
         }
@@ -136,7 +137,6 @@ public class UrlCheckActivity extends AppCompatActivity {
         return new ArrayList<>(set);
     }
 
-    /** 沒有 scheme 的補 https:// */
     private String normalizeUrl(String in) {
         String s = in.trim();
         if (s.matches("(?i)^https?://.+")) return s;
