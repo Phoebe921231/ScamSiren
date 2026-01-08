@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +26,16 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        // 1. 新增：歷史紀錄按鈕 (因為我們在 XML 是用 LinearLayout 包起來的)
+        LinearLayout btnHistory = findViewById(R.id.btnHistory);
+        if (btnHistory != null) {
+            btnHistory.setOnClickListener(v -> {
+                // 跳轉到新的 HistoryActivity
+                Intent intent = new Intent(MainActivity.this, HistoryActivity.class);
+                startActivity(intent);
+            });
+        }
 
         // 截圖辨識按鈕
         Button btnImage = findViewById(R.id.btnImage);

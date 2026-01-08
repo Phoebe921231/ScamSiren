@@ -17,6 +17,7 @@
         android:usesCleartextTraffic="true">
 
         <!-- 無 intent-filter 的 Activity 不需設定 exported -->
+        <activity android:name=".activity_privacy_dialog" />
         <activity android:name=".CallRecordSettingActivity" />
         <activity android:name=".MainActivity" />
         <activity android:name=".UrlCheckActivity" />
@@ -33,6 +34,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".HistoryActivity" />
+        <activity android:name=".HistoryDetailActivity" />
 
     </application>
 </manifest>

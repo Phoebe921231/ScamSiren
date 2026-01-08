@@ -7,9 +7,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -21,11 +21,14 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.fp2.db.AppDatabase;
+import com.example.fp2.db.RiskRecordEntity;
 import com.example.fp2.model.ApiResponse;
 import com.example.fp2.model.ResultFormatter;
 import com.example.fp2.net.BackendService;
 
 import java.io.IOException;
+import java.util.Locale;
 
 public class AudioRecognitionActivity extends AppCompatActivity {
 
@@ -40,20 +43,25 @@ public class AudioRecognitionActivity extends AppCompatActivity {
     private TextView selectedFileName;
     private ImageButton playPauseBtn;
 
-    private Uri selectedAudioUri = null;
+    private Uri selectedAudioUri;
     private MediaPlayer mediaPlayer;
     private boolean isPrepared = false;
 
+    // ===== 選音檔 =====
     private final ActivityResultLauncher<Intent> pickAudioLocal =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
                 if (r.getResultCode() == RESULT_OK && r.getData() != null) {
                     Uri uri = r.getData().getData();
                     if (uri != null) {
                         try {
-                            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            getContentResolver().takePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            );
                         } catch (Exception ignored) {}
+
                         selectedAudioUri = uri;
-                        showSelectedAudioUi(getDisplayName(uri));
+                        showSelectedAudioUi(FileUtils.displayName(this, uri));
                         preparePlayer(uri);
                         toast("已選擇音檔");
                         return;
@@ -66,7 +74,7 @@ public class AudioRecognitionActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
                 if (uri != null) {
                     selectedAudioUri = uri;
-                    showSelectedAudioUi(getDisplayName(uri));
+                    showSelectedAudioUi(FileUtils.displayName(this, uri));
                     preparePlayer(uri);
                     toast("已選擇音檔");
                 } else {
@@ -97,9 +105,7 @@ public class AudioRecognitionActivity extends AppCompatActivity {
         playPauseBtn = findViewById(R.id.playPauseBtn);
 
         backArrow.setOnClickListener(v -> {
-            Intent intent = new Intent(AudioRecognitionActivity.this, MainActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(intent);
+            startActivity(new Intent(this, MainActivity.class));
             finish();
         });
 
@@ -114,8 +120,24 @@ public class AudioRecognitionActivity extends AppCompatActivity {
         releasePlayer();
     }
 
+    // ===== 使用者操作 =====
     public void onPickAudioClicked(View v) {
-        startPickAudioPreferDownloads();
+        try {
+            Uri downloadsRoot = Uri.parse(
+                    "content://com.android.providers.downloads.documents/root/downloads"
+            );
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                    .addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("audio/*")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloadsRoot);
+            }
+            pickAudioLocal.launch(intent);
+        } catch (Exception e) {
+            pickAudioSimple.launch("audio/*");
+        }
     }
 
     public void onStartRecognitionClicked(View v) {
@@ -126,53 +148,71 @@ public class AudioRecognitionActivity extends AppCompatActivity {
         uploadAudioToBackend(selectedAudioUri);
     }
 
-    private void startPickAudioPreferDownloads() {
-        try {
-            Uri downloadsRoot = Uri.parse("content://com.android.providers.downloads.documents/root/downloads");
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
-                    .addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("audio/*")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, downloadsRoot);
-            }
-            pickAudioLocal.launch(intent);
-        } catch (Exception e) {
-            pickAudioSimple.launch("audio/*");
-        }
-    }
-
+    // ===== 上傳 & 判斷 =====
     private void uploadAudioToBackend(Uri uri) {
         setButtonsEnabled(false);
         resultText.setText("上傳並分析中…");
+
         backend.uploadAudio(this, uri, new BackendService.Callback() {
-            @Override public void onSuccess(ApiResponse data) {
+            @Override
+            public void onSuccess(ApiResponse data) {
                 runOnUiThread(() -> {
-                    renderResult(data);
+                    String pretty = ResultFormatter.format(data);
+                    resultText.setText(pretty);
+
+                    saveAudioRiskIfNeeded(data, uri, pretty);
+
                     setButtonsEnabled(true);
                 });
             }
-            @Override public void onError(String message) {
+
+            @Override
+            public void onError(String message) {
                 runOnUiThread(() -> {
-                    resultText.setText("錯誤: " + message);
+                    resultText.setText("錯誤：" + message);
                     setButtonsEnabled(true);
                 });
             }
         });
     }
 
-    private void renderResult(ApiResponse r) {
-        resultText.setText(ResultFormatter.format(r));
+    // ===== 寫入 Room（音檔）=====
+    private void saveAudioRiskIfNeeded(ApiResponse data, Uri audioUri, String summary) {
+        if (data == null || audioUri == null) return;
+
+        String riskLevel = normalizeRiskLevel(data.risk, data.is_scam);
+        if (!"MEDIUM".equals(riskLevel) && !"HIGH".equals(riskLevel)) return;
+
+        int score = "HIGH".equals(riskLevel) ? 90 : 65;
+
+        RiskRecordEntity record = new RiskRecordEntity(
+                "AUDIO",
+                audioUri.toString(),
+                riskLevel,
+                score,
+                summary,
+                System.currentTimeMillis()
+        );
+
+        AppDatabase.getInstance(this)
+                .riskRecordDao()
+                .insert(record);
+    }
+
+    // ===== 工具 =====
+    private String normalizeRiskLevel(String risk, boolean isScam) {
+        if (risk == null) return isScam ? "HIGH" : "LOW";
+        String r = risk.trim().toUpperCase(Locale.ROOT);
+        if (r.contains("HIGH") || r.contains("高")) return "HIGH";
+        if (r.contains("MED") || r.contains("中")) return "MEDIUM";
+        if (r.contains("LOW") || r.contains("低")) return "LOW";
+        return isScam ? "HIGH" : "LOW";
     }
 
     private void showSelectedAudioUi(String name) {
         micIcon.setVisibility(View.GONE);
         audioSelectedGroup.setVisibility(View.VISIBLE);
-        selectedFileName.setText(name == null ? "已選擇的音檔" : name);
-    }
-
-    private String getDisplayName(Uri uri) {
-        return FileUtils.displayName(this, uri);
+        selectedFileName.setText(name == null ? "已選擇音檔" : name);
     }
 
     private void preparePlayer(Uri uri) {
@@ -184,7 +224,8 @@ public class AudioRecognitionActivity extends AppCompatActivity {
                 isPrepared = true;
                 playPauseBtn.setImageResource(android.R.drawable.ic_media_play);
             });
-            mediaPlayer.setOnCompletionListener(mp -> playPauseBtn.setImageResource(android.R.drawable.ic_media_play));
+            mediaPlayer.setOnCompletionListener(mp ->
+                    playPauseBtn.setImageResource(android.R.drawable.ic_media_play));
             mediaPlayer.prepareAsync();
         } catch (IOException e) {
             toast("無法預覽音檔");
@@ -220,4 +261,5 @@ public class AudioRecognitionActivity extends AppCompatActivity {
         Toast.makeText(this, s, Toast.LENGTH_LONG).show();
     }
 }
+
 

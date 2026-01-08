@@ -27,6 +27,7 @@ public class BackendService {
 
     private static String baseUrl(){
         String u = BuildConfig.BASE_URL;
+        Log.d("FP2_BASE_URL", "BuildConfig.BASE_URL = [" + u + "]");
         if (u.endsWith("/")) u = u.substring(0, u.length()-1);
         return u;
     }
@@ -113,6 +114,8 @@ public class BackendService {
         String a = r!=null && r.meta!=null ? r.meta.asr_backend : null;
         Log.d("FP2","model="+m+",asr="+a);
     }
+
+
 }
 
 

@@ -10,7 +10,7 @@ val props = Properties().apply {
     if (lp.exists()) FileInputStream(lp).use { load(it) }
 }
 val urlscanKey: String = props.getProperty("URLSCAN_API_KEY", "")
-val baseUrlDebug: String = props.getProperty("BASE_URL_DEBUG", "http://192.168.56.1:5000")
+val baseUrlDebug: String = props.getProperty("BASE_URL_DEBUG", "http://192.168.1.107:5000")
 val baseUrlRelease: String = props.getProperty("BASE_URL_RELEASE", "https://example.com")
 
 android {
@@ -56,8 +56,11 @@ dependencies {
     implementation("com.google.mlkit:text-recognition-chinese:16.0.0-beta5")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    annotationProcessor("androidx.room:room-compiler:2.6.1")
 }
 
