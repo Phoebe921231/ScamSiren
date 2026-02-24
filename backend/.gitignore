@@ -1,0 +1,17 @@
+venv/
+venv311/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+instance/
+.cache/
+.pytest_cache/
+
+.vscode/
+.idea/
+.DS_Store
+
+.env
+.env.*
+uploads/
