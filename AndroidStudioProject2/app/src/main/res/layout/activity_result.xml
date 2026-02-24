@@ -34,16 +34,40 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- ✅ 框外標題：判別結果（統一錄音頁風格） -->
+    <ImageView
+        android:id="@+id/fileIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="檔案圖示"
+        android:src="@drawable/ic_file"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
 
-    <!-- 外層白框 + 內層綠框 + 可滑動文字 -->
+    <TextView
+        android:id="@+id/resultLabelText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="16dp"
+        android:text="判別結果"
+        android:textColor="#227D60"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/fileIcon"
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
+
+    <!-- 外層白框 + 內層綠框 -->
     <FrameLayout
         android:id="@+id/frameContainer"
         android:layout_width="320dp"
         android:layout_height="420dp"
-        android:layout_marginTop="18dp"
+        android:layout_marginTop="10dp"
         android:background="@drawable/bg_outer_white_box"
         android:padding="16dp"
-        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintTop_toBottomOf="@id/resultLabelText"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -54,20 +78,69 @@
             android:layout_height="match_parent"
             android:background="@drawable/bg_inner_green_box" />
 
-        <!-- 可垂直滑動的文字區塊 -->
+        <!-- ✅ 內部內容：分兩段（偵測文字 / 風險判斷） -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="12dp">
+            android:padding="12dp"
+            android:fillViewport="true">
 
-            <TextView
-                android:id="@+id/resultText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="結果會顯示在這裡"
-                android:textColor="#227D60"
-                android:textSize="20sp"
-                android:gravity="start" />
+                android:orientation="vertical">
+
+                <!-- 偵測到的文字：粗體放大 -->
+                <TextView
+                    android:id="@+id/detectedTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="偵測到的文字"
+                    android:textColor="#227D60"
+                    android:textStyle="bold"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/detectedText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="（尚未取得偵測文字）"
+                    android:textColor="#227D60"
+                    android:textSize="20sp"
+                    android:lineSpacingExtra="6dp"
+                    android:textIsSelectable="true" />
+
+                <!-- 分隔線 -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="#88FFFFFF" />
+
+                <!-- 風險判斷：粗體放大 -->
+                <TextView
+                    android:id="@+id/riskTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="風險判斷"
+                    android:textColor="#227D60"
+                    android:textStyle="bold"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/riskText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="結果會顯示在這裡"
+                    android:textColor="#227D60"
+                    android:textSize="20sp"
+                    android:lineSpacingExtra="6dp"
+                    android:textIsSelectable="true" />
+
+            </LinearLayout>
         </ScrollView>
     </FrameLayout>
 
@@ -76,15 +149,14 @@
         android:id="@+id/uploadButton"
         android:layout_width="230dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="22dp"
         android:backgroundTint="#227D60"
         android:text="上傳其他截圖"
         android:textColor="#FFFFFF"
         android:textSize="30sp"
         android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.961"
+        app:layout_constraintTop_toBottomOf="@id/frameContainer"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/frameContainer" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

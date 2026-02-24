@@ -8,10 +8,12 @@ public class ApiResponse {
     public String risk;
     public List<String> reasons;
     public List<String> advices;
+    public String detected_text;
+    public String source;
     public JsonElement analysis;
     public String text;
     public Meta meta;
-
+    public java.util.List<String> scam_type;
     public static class Meta{
         public String asr_backend;
         public String ollama_model;

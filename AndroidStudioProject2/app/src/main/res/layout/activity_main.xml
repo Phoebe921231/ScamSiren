@@ -6,10 +6,41 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#EEF5F2"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    tools:layout_editor_absoluteX="0dp"
+    tools:layout_editor_absoluteY="-10dp">
+
+    <LinearLayout
+        android:id="@+id/btnHistory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="24dp"
+        android:layout_marginTop="24dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_history"
+            app:tint="#227D60" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="歷史紀錄"
+            android:textColor="#227D60"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <!-- 說明圖示 -->
-
     <ImageView
         android:id="@+id/helpIcon"
         android:layout_width="48dp"
@@ -42,7 +73,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/helpIcon" />
 
-    <!-- 截圖辨識按鈕 -->
     <TextView
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
@@ -56,12 +86,36 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/logoIcon" />
 
+    <!-- ✅ 新增：文字辨識按鈕（放在截圖辨識上面） -->
+    <Button
+        android:id="@+id/btnText"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="44dp"
+        android:layout_marginEnd="32dp"
+        android:background="@drawable/btn_square"
+        android:drawableLeft="@drawable/ic_text"
+        android:drawablePadding="24dp"
+        android:gravity="center_vertical"
+        android:paddingStart="48dp"
+        android:text="文字辨識"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/titleText" />
+
+    <!-- 截圖辨識按鈕 -->
     <Button
         android:id="@+id/btnImage"
         android:layout_width="0dp"
         android:layout_height="80dp"
         android:layout_marginStart="32dp"
-        android:layout_marginTop="56dp"
+        android:layout_marginTop="24dp"
         android:layout_marginEnd="32dp"
         android:background="@drawable/btn_square"
         android:drawableLeft="@drawable/ic_screenshot"
@@ -76,15 +130,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/titleText" />
-
+        app:layout_constraintTop_toBottomOf="@id/btnText" />
 
     <Button
         android:id="@+id/btnAudio"
         android:layout_width="0dp"
         android:layout_height="80dp"
         android:layout_marginStart="32dp"
-        android:layout_marginTop="36dp"
+        android:layout_marginTop="24dp"
         android:layout_marginEnd="32dp"
         android:background="@drawable/btn_square"
         android:drawableLeft="@drawable/ic_mic"
@@ -106,7 +159,7 @@
         android:layout_width="0dp"
         android:layout_height="80dp"
         android:layout_marginStart="32dp"
-        android:layout_marginTop="36dp"
+        android:layout_marginTop="24dp"
         android:layout_marginEnd="32dp"
         android:background="@drawable/btn_square"
         android:drawableLeft="@drawable/ic_link"

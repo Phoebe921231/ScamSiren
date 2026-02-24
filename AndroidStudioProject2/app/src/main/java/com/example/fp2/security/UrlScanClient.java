@@ -1,16 +1,18 @@
 package com.example.fp2.security;
 
 import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
-import java.util.Iterator;
 import java.util.List;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -54,6 +56,9 @@ public class UrlScanClient {
 
     private RiskResult evaluateBlocking(String targetUrl) throws Exception {
         JSONObject resultJson = fetchLatestResult(targetUrl);
+
+        // 只信任 overall，因此 strong 也只看 overall
+        // 若目前結果不夠 strong 且有 API key，才主動 scan 再 poll 一次拿更新結果
         if (!isStrong(resultJson) && hasKey()) {
             String uuid = postScan(targetUrl);
             if (uuid != null) {
@@ -61,7 +66,10 @@ public class UrlScanClient {
                 if (isVerdictReady(polled)) resultJson = polled;
             }
         }
-        if (resultJson == null) return new RiskResult(targetUrl, "未知", 0, listOf("無可用結果"), "", "");
+
+        if (resultJson == null) {
+            return new RiskResult(targetUrl, "未知", 0, listOf("無可用結果"), "", "");
+        }
         return parseRisk(targetUrl, resultJson);
     }
 
@@ -70,6 +78,7 @@ public class UrlScanClient {
         JSONObject s1 = getJson(BASE + "/search/?q=" + enc(q1) + "&size=1&sort=desc");
         JSONObject r = extractResult(s1);
         if (r != null && isVerdictReady(r)) return r;
+
         String q2 = "page.url:\"" + url + "\"";
         JSONObject s2 = getJson(BASE + "/search/?q=" + enc(q2) + "&size=1&sort=desc");
         return extractResult(s2);
@@ -79,14 +88,17 @@ public class UrlScanClient {
         if (search == null) return null;
         JSONArray results = search.optJSONArray("results");
         if (results == null || results.length() == 0) return null;
+
         JSONObject first = results.optJSONObject(0);
         if (first == null) return null;
+
         String resultLink = first.optString("result", null);
         String uuid = first.optString("_id", null);
         if (uuid == null) {
             JSONObject task = first.optJSONObject("task");
             if (task != null) uuid = task.optString("uuid", null);
         }
+
         if (resultLink != null) return getJson(resultLink);
         if (uuid != null) return getJson(BASE + "/result/" + uuid + "/");
         return null;
@@ -97,7 +109,10 @@ public class UrlScanClient {
     }
 
     private JSONObject getJson(String url) throws IOException, JSONException {
-        Request req = new Request.Builder().url(url).header("User-Agent", "fp2-urlscan/1.0").build();
+        Request req = new Request.Builder()
+                .url(url)
+                .header("User-Agent", "fp2-urlscan/1.0")
+                .build();
         try (Response resp = http.newCall(req).execute()) {
             if (!resp.isSuccessful()) return null;
             String body = resp.body() != null ? resp.body().string() : null;
@@ -109,12 +124,15 @@ public class UrlScanClient {
         JSONObject payload = new JSONObject();
         payload.put("url", targetUrl);
         payload.put("visibility", "public");
+
         Request.Builder b = new Request.Builder()
                 .url(BASE + "/scan/")
                 .post(RequestBody.create(payload.toString(), JSON))
                 .header("User-Agent", "fp2-urlscan/1.0")
                 .header("Content-Type", "application/json");
+
         if (hasKey()) b.header("API-Key", apiKey);
+
         Request req = b.build();
         try (Response resp = http.newCall(req).execute()) {
             if (!resp.isSuccessful()) return null;
@@ -136,30 +154,43 @@ public class UrlScanClient {
         return latest;
     }
 
+    /**
+     * ✅ 改：只認 overall 是否具備資訊（score/malicious/categories/tags）
+     * engines/urlscan 不再作為 ready 條件
+     */
     private boolean isVerdictReady(JSONObject result) {
         if (result == null) return false;
         JSONObject verdicts = result.optJSONObject("verdicts");
         if (verdicts == null) return false;
+
         JSONObject overall = verdicts.optJSONObject("overall");
-        JSONObject engines = verdicts.optJSONObject("engines");
-        JSONObject urlscanV = verdicts.optJSONObject("urlscan");
-        boolean hasOverall = overall != null && (overall.has("score") || overall.has("malicious")
-                || (overall.optJSONArray("categories") != null && overall.optJSONArray("categories").length() > 0)
-                || (overall.optJSONArray("tags") != null && overall.optJSONArray("tags").length() > 0));
-        boolean hasEngines = engines != null && engines.length() > 0;
-        boolean hasUrlscanScore = urlscanV != null && urlscanV.has("score");
-        return hasOverall || hasEngines || hasUrlscanScore;
+        if (overall == null) return false;
+
+        boolean hasScore = overall.has("score");
+        boolean hasMal = overall.has("malicious");
+        JSONArray cats = overall.optJSONArray("categories");
+        JSONArray tags = overall.optJSONArray("tags");
+
+        boolean hasCats = cats != null && cats.length() > 0;
+        boolean hasTags = tags != null && tags.length() > 0;
+
+        return hasScore || hasMal || hasCats || hasTags;
     }
 
+    /**
+     * ✅ 改：strong 也只看 overall（惡意 or phishing/malware）
+     */
     private boolean isStrong(JSONObject result) {
         if (!isVerdictReady(result)) return false;
+
         JSONObject verdicts = result.optJSONObject("verdicts");
         JSONObject overall = verdicts != null ? verdicts.optJSONObject("overall") : null;
-        JSONObject engines = verdicts != null ? verdicts.optJSONObject("engines") : null;
-        if (overall != null && overall.optBoolean("malicious", false)) return true;
-        if (engines != null && engines.length() > 0) return true;
-        JSONArray cats = overall != null ? overall.optJSONArray("categories") : null;
-        JSONArray tags = overall != null ? overall.optJSONArray("tags") : null;
+        if (overall == null) return false;
+
+        if (overall.optBoolean("malicious", false)) return true;
+
+        JSONArray cats = overall.optJSONArray("categories");
+        JSONArray tags = overall.optJSONArray("tags");
         return containsAny(cats, "phishing", "malware") || containsAny(tags, "phishing", "malware");
     }
 
@@ -172,52 +203,43 @@ public class UrlScanClient {
         return false;
     }
 
+    /**
+     * ✅ 改：完全信任 overall
+     * - 分數只取 overall.score
+     * - 不看 engines、不看 urlscan.score
+     */
     private RiskResult parseRisk(String targetUrl, JSONObject result) {
         List<String> reasons = new ArrayList<>();
         JSONObject verdicts = result.optJSONObject("verdicts");
-        JSONObject overall  = verdicts != null ? verdicts.optJSONObject("overall")  : null;
-        JSONObject engines  = verdicts != null ? verdicts.optJSONObject("engines")  : null;
-        JSONObject urlscanV = verdicts != null ? verdicts.optJSONObject("urlscan")  : null;
+        JSONObject overall  = verdicts != null ? verdicts.optJSONObject("overall") : null;
 
-        boolean overallMal = overall != null && overall.optBoolean("malicious", false);
-        int overallScore    = overall != null ? overall.optInt("score", 0) : 0;
+        // 若 overall 缺失，依你「只信 overall」哲學：直接回未知
+        if (overall == null) {
+            return new RiskResult(targetUrl, "未知", 0, listOf("verdicts.overall 缺失，無法判定"), "", "");
+        }
+
+        boolean overallMal = overall.optBoolean("malicious", false);
+        int overallScore   = overall.optInt("score", 0);
 
         List<String> kinds = new ArrayList<>();
-        if (overall != null) {
-            JSONArray cats = overall.optJSONArray("categories");
-            if (cats != null && cats.length() > 0) {
-                reasons.add("Categories: " + cats.toString());
-                kinds.addAll(toKeys(cats));
-            }
-            JSONArray tags = overall.optJSONArray("tags");
-            if (tags != null && tags.length() > 0) {
-                reasons.add("Tags: " + tags.toString());
-                kinds.addAll(toKeys(tags));
-            }
+        JSONArray cats = overall.optJSONArray("categories");
+        if (cats != null && cats.length() > 0) {
+            reasons.add("Categories: " + cats.toString());
+            kinds.addAll(toKeys(cats));
+        }
+        JSONArray tags = overall.optJSONArray("tags");
+        if (tags != null && tags.length() > 0) {
+            reasons.add("Tags: " + tags.toString());
+            kinds.addAll(toKeys(tags));
         }
 
-        boolean anyEngineMal = false;
-        if (engines != null) {
-            Iterator<String> it = engines.keys();
-            List<String> hits = new ArrayList<>();
-            while (it.hasNext()) {
-                String key = it.next();
-                JSONObject e = engines.optJSONObject(key);
-                if (e != null && e.optBoolean("malicious", false)) {
-                    anyEngineMal = true;
-                    hits.add(key);
-                }
-            }
-            if (!hits.isEmpty()) reasons.add("Engines 命中: " + join(", ", hits));
-        }
-
-        int urlscanScore = urlscanV != null ? urlscanV.optInt("score", 0) : 0;
-        int score = Math.max(overallScore, urlscanScore);
+        // ✅ 分數只用 overall
+        int score = overallScore;
 
         String verdict;
-        if (overallMal || anyEngineMal || hasKind(kinds, "phishing") || hasKind(kinds, "malware")) {
+        if (overallMal || hasKind(kinds, "phishing") || hasKind(kinds, "malware")) {
             verdict = "高風險";
-            score = Math.max(score, 80);
+            score = Math.max(score, 80); // 保底 80（保留你原本邏輯）
         } else if (score >= 40) {
             verdict = "中風險";
         } else {
@@ -227,7 +249,7 @@ public class UrlScanClient {
         String summary = buildSummary(verdict, kinds);
         String advice  = buildAdvice(verdict, kinds);
 
-        if (reasons.isEmpty()) reasons.add("未見引擎惡意命中；請留意上下文並持續監控");
+        if (reasons.isEmpty()) reasons.add("未見明確惡意訊號；請留意上下文並持續監控");
         return new RiskResult(targetUrl, verdict, score, reasons, summary, advice);
     }
 

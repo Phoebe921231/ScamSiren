@@ -153,7 +153,7 @@
     <FrameLayout
         android:id="@+id/resultContainer"
         android:layout_width="330dp"
-        android:layout_height="290dp"
+        android:layout_height="330dp"
         android:layout_marginTop="12dp"
         android:background="@drawable/bg_outer_white_box"
         android:padding="16dp"
@@ -171,16 +171,65 @@
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="12dp">
+            android:padding="12dp"
+            android:fillViewport="true">
 
-            <TextView
-                android:id="@+id/resultText"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="start"
-                android:text="結果會顯示在這裡"
-                android:textColor="#227D60"
-                android:textSize="20sp" />
+                android:orientation="vertical">
+
+                <!-- ✅ 偵測到的文字：粗體放大 -->
+                <TextView
+                    android:id="@+id/detectedTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="偵測到的文字"
+                    android:textColor="#227D60"
+                    android:textStyle="bold"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/detectedText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="（尚未取得偵測文字）"
+                    android:textColor="#227D60"
+                    android:textSize="20sp"
+                    android:lineSpacingExtra="6dp"
+                    android:textIsSelectable="true" />
+
+                <!-- 分隔線 -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="14dp"
+                    android:background="#88FFFFFF" />
+
+                <!-- ✅ 風險判斷：粗體放大 -->
+                <TextView
+                    android:id="@+id/riskTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="風險判斷"
+                    android:textColor="#227D60"
+                    android:textStyle="bold"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/riskText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="結果會顯示在這裡"
+                    android:textColor="#227D60"
+                    android:textSize="20sp"
+                    android:lineSpacingExtra="6dp"
+                    android:textIsSelectable="true" />
+
+            </LinearLayout>
         </ScrollView>
     </FrameLayout>
 
