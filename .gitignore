@@ -1,0 +1,15 @@
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Local config
+local.properties
+
+# Outputs
+*.apk
+output-metadata.json
