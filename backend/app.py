@@ -20,7 +20,7 @@ print("### ScamSiren backend loaded (rules + ollama + whisper) ###")
 
 # -------------------------
 
-# ✅ 簡轉繁（不影響英文；OpenCC 不存在也不會壞）
+#  簡轉繁）
 
 # 只會用在「輸出 detected_text/text 前」做轉換
 
@@ -30,7 +30,7 @@ try:
 
     from opencc import OpenCC
 
-    _cc = OpenCC("s2t")  # 簡體->繁體（通用）
+    _cc = OpenCC("s2t")  # 簡體->繁體
 
 except Exception:
 
@@ -152,13 +152,13 @@ def _has_any(text: str, patterns: List[str]) -> bool:
 
 # -------------------------
 
-# Scam patterns (Taiwan context)
+# Scam patterns 
 
 # -------------------------
 
 PATTERNS = {
 
-    # ===== 高風險核心（台灣最常見）=====
+    #  高風險
 
     "otp_harvest": r"(otp|o\W*t\W*p|一次性(密碼|驗證碼|验证码)|動態密碼|簡訊(驗證)?碼|驗證碼|验证码|授權碼|安全碼|verification\s*code)",
 
@@ -174,19 +174,13 @@ PATTERNS = {
 
     "transfer_money": r"(轉帳|转账|匯款|汇款|匯入|汇入|轉入|转入|打款|入金|出金|提領|提现)",
 
-
-
-    # ✅ NEW：金流/個資/收款（你要的新類別）
-
-    # 目標：對方要求「提供銀行帳號/個資」或「付款/支付/繳費/匯款到指定帳戶」
-
     "payment_personal_info": r"(提供.*(身分證|身份证|證件|證號|证号|姓名|住址|地址|電話|手机号|手機號|生日|戶籍|账号|帳號|账户|帳戶|銀行帳號|银行账号|卡號|卡号|信用卡|cvv|安全碼|有效期限|密碼|密码)|"
 
                            r"(匯款|汇款|轉帳|转账|付款|支付|繳費|缴费|刷卡|收款|入金|出金|轉入|转入|匯入|汇入).*(指定|我的|本|該|该).*(帳戶|账户|銀行|银行|卡|平台|連結|链接))",
 
 
 
-    # ===== 中風險（常見引導/社工）=====
+    #  中風險
 
     "line_add": r"(加(入|到)?(官方)?\s*line|加賴|加line|line\s*id|line客服|加入.*line.*客服|加.*客服line)",
 
@@ -226,10 +220,6 @@ ACTIONS_PAT = {
 
     "要求掃QR": r"(掃(描)?\s*(qr|二維碼|二维码|條碼)|扫码|掃一下|扫一下)",
 
-
-
-    # ✅ NEW：要求提供銀行帳號/個資/付款（對應你新增類別）
-
     "要求提供銀行帳號或個資/付款": r"(提供|告知|傳|发|发送|填寫|填写).*(身分證|身份证|姓名|住址|地址|電話|手机号|手機號|帳號|账号|帳戶|账户|銀行帳號|银行账号|卡號|卡号|信用卡|cvv|安全碼|有效期限)|"
 
                             r"(付款|支付|繳費|缴费|匯款|汇款|轉帳|转账).*(指定|我的|本|該|该).*(帳戶|账户|銀行|银行)",
@@ -253,10 +243,6 @@ FLOOR = {
     "freeze_threat": "high",
 
     "transfer_money": "high",
-
-
-
-    # ✅ NEW：高風險
 
     "payment_personal_info": "high",
 
@@ -292,7 +278,7 @@ REV  = {0: "low", 1: "medium", 2: "high"}
 
 
 
-# ✅ 這裡的文字就是你「詐騙類型」的顯示名稱（全部都有對應）
+# 「詐騙類型」的顯示名稱
 
 CATEGORY_NAME_ZH = {
 
@@ -309,10 +295,6 @@ CATEGORY_NAME_ZH = {
     "freeze_threat": "帳戶凍結/停用恐嚇詐騙",
 
     "transfer_money": "匯款/轉帳詐騙",
-
-
-
-    # ✅ NEW
 
     "payment_personal_info": "金流/個資/收款詐騙",
 
@@ -358,21 +340,16 @@ ADVICE_BY_CATEGORY = {
 
     "parcel_refund": ["客服退款不會要求你操作 ATM 或提供 OTP", "請到官方 APP/網站查訂單，不要點不明連結"],
 
-
-
-    # ✅ NEW：金流/個資
-
     "payment_personal_info": ["不要提供銀行帳號/卡號/身分證/驗證碼等個資", "不要依指示付款或匯款到對方指定帳戶，請改由你自行撥打 165 或銀行官方客服查證"],
 
 }
 
 
 
-# -------------------------
 
-# ✅ NEW: 單一詐騙類型分類器（scam_type 永遠只有 1 個，且永遠有）
 
-# -------------------------
+#  單一詐騙類型分類器
+
 
 def build_scam_type_single(cats: List[str], acts: List[str]) -> List[str]:
 
@@ -394,7 +371,6 @@ def build_scam_type_single(cats: List[str], acts: List[str]) -> List[str]:
 
 
 
-    # ✅ 你可以視覺上理解成「最像你想要的明確標籤」優先順序
 
     priority_order = [
 
@@ -408,7 +384,7 @@ def build_scam_type_single(cats: List[str], acts: List[str]) -> List[str]:
 
 
 
-        "payment_personal_info",  # NEW：金流/個資/收款（很關鍵）
+        "payment_personal_info",  
 
         "atm_operation",
 
@@ -486,7 +462,7 @@ def build_scam_type_single(cats: List[str], acts: List[str]) -> List[str]:
 
 def rule_check(text: str):
 
-    # ✅ 不做簡轉繁；直接用原文做規則判斷（你要求「不要動判斷流程」）
+   
 
     t = _norm(text or "")
 
@@ -615,7 +591,7 @@ def transcribe(filepath: str) -> str:
 
 
 
-    # ✅ 不在這裡轉繁（你要求只在輸出前轉）
+
 
     return text
 
@@ -659,7 +635,6 @@ def call_llm(text: str) -> dict:
 
 
 
-    # ✅ 不在送入 LLM 前轉繁（你要求只在輸出偵測文字前轉）
 
     if len(text) > LLM_MAX_CHARS:
 
@@ -831,7 +806,7 @@ def fuse(
 
 
 
-    # ✅ risk 保底（防呆）
+    #  risk 保底
 
     if base not in ("low", "medium", "high"):
 
@@ -881,7 +856,7 @@ def fuse(
 
 
 
-    # ✅ advices 一定有
+    #  advices 一定有
 
     advices = build_advices(base, cats, llm_obj)
 
@@ -891,7 +866,7 @@ def fuse(
 
 
 
-    # ✅ NEW：scam_type 一定有、且只會 1 個（明確單一）
+    # NEW：scam_type 一定有、且只會 1 個（明確單一）
 
     scam_type = build_scam_type_single(cats, acts)
 
@@ -899,7 +874,7 @@ def fuse(
 
     # -------------------------
 
-    # ✅ 你要的改動：只在「輸出偵測到的文字」前做簡轉繁
+    # 只在「輸出偵測到的文字」前做簡轉繁
 
     # -------------------------
 
@@ -909,15 +884,15 @@ def fuse(
 
     return {
 
-        "text": text_out,                 # 保留：舊版可用
+        "text": text_out,
 
         "detected_text": text_out,        # 前端統一吃這個（OCR/ASR 都用）
 
-        "risk": base,                     # 一定有
+        "risk": base,
 
-        "scam_type": scam_type,           # ✅ 一定有、且單一
+        "scam_type": scam_type,
 
-        "advices": advices,               # 一定有
+        "advices": advices,
 
         "is_scam": is_scam,
 
@@ -1075,7 +1050,7 @@ def analyze_text():
 
 
 
-    # ✅ 不在這裡轉繁；只在輸出 detected_text/text 前轉
+
 
     if not text:
 
@@ -1165,13 +1140,12 @@ def upload_audio():
 
         wav_path = to_wav_16k(raw_path)
 
-        text = transcribe(wav_path)  # ✅ 不轉繁
+        text = transcribe(wav_path)
 
 
 
         if not text or len(text) < 6:
 
-            # ✅ 輸出 detected_text/text 仍然會是繁體（這裡也照你的要求只在輸出前轉）
 
             text_out = to_trad(text or "")
 
@@ -1201,7 +1175,7 @@ def upload_audio():
 
 
 
-        out = decide(text)  # ✅ decide 內部不轉繁；輸出 detected_text/text 才轉
+        out = decide(text)
 
         out["source"] = "asr"
 
@@ -1211,7 +1185,7 @@ def upload_audio():
 
     except Exception as e:
 
-        # ✅ 這裡 text/detected_text 也照規則只在輸出前轉
+
 
         text_out = to_trad(text or "")
 
