@@ -1,11 +1,14 @@
-
 import os, re, uuid, json, tempfile, unicodedata, subprocess, shutil, requests, time
+
 from typing import List, Dict, Optional
+
 
 
 from flask import Flask, request, jsonify
 
 from flask_cors import CORS
+
+
 
 from stats_db import init_db, insert_stat
 
@@ -17,12 +20,51 @@ print("### ScamSiren backend loaded (rules + ollama + whisper) ###")
 
 # -------------------------
 
+# ✅ 簡轉繁（不影響英文；OpenCC 不存在也不會壞）
+
+# 只會用在「輸出 detected_text/text 前」做轉換
+
+# -------------------------
+
+try:
+
+    from opencc import OpenCC
+
+    _cc = OpenCC("s2t")  # 簡體->繁體（通用）
+
+except Exception:
+
+    _cc = None
+
+
+
+def to_trad(s: str) -> str:
+
+    if not s:
+
+        return s
+
+    if _cc is None:
+
+        return s
+
+    try:
+
+        return _cc.convert(s)
+
+    except Exception:
+
+        return s
+
+
+
+# -------------------------
+
 # Config
 
 # -------------------------
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
-
 
 SCAM_MODEL  = os.getenv("SCAM_MODEL", "scam-guard")
 
@@ -59,7 +101,9 @@ LLM_MAX_CHARS = int(os.getenv("LLM_MAX_CHARS", "500"))
 
 
 app = Flask(__name__)
+
 init_db()
+
 
 
 app.config["JSON_AS_ASCII"] = False
@@ -71,6 +115,8 @@ try:
 except Exception:
 
     pass
+
+
 
 CORS(app, supports_credentials=True)
 
@@ -130,6 +176,16 @@ PATTERNS = {
 
 
 
+    # ✅ NEW：金流/個資/收款（你要的新類別）
+
+    # 目標：對方要求「提供銀行帳號/個資」或「付款/支付/繳費/匯款到指定帳戶」
+
+    "payment_personal_info": r"(提供.*(身分證|身份证|證件|證號|证号|姓名|住址|地址|電話|手机号|手機號|生日|戶籍|账号|帳號|账户|帳戶|銀行帳號|银行账号|卡號|卡号|信用卡|cvv|安全碼|有效期限|密碼|密码)|"
+
+                           r"(匯款|汇款|轉帳|转账|付款|支付|繳費|缴费|刷卡|收款|入金|出金|轉入|转入|匯入|汇入).*(指定|我的|本|該|该).*(帳戶|账户|銀行|银行|卡|平台|連結|链接))",
+
+
+
     # ===== 中風險（常見引導/社工）=====
 
     "line_add": r"(加(入|到)?(官方)?\s*line|加賴|加line|line\s*id|line客服|加入.*line.*客服|加.*客服line)",
@@ -138,7 +194,7 @@ PATTERNS = {
 
     "urgency_keep_line": r"(不要掛斷|不要挂断|保持通話|保持通话|先不要掛|別掛|别挂|限時|逾期|立即處理|立刻處理|馬上處理|转接专员|轉接專員|一級保密|一级保密|不要告訴任何人|不要告诉任何人)",
 
-    "install_app": r"(安裝(應用|app)|安装(应用|app)|下載.*app|下载.*app|點連結下載|點擊連結下載|授權.*存取|开启权限|開啟權限|允許權限)",
+    "install_app": r"(安裝(應用|app)|安装(应用|app)|下載.*app|download.*app|下载.*app|點連結下載|點擊連結下載|授權.*存取|开启权限|開啟權限|允許權限)",
 
     "customs_scam": r"(關務|海關|海关|清關|清关|關稅|关税|違禁品|限制品|包裹(暫扣|逾期|卡關)|关务专员|關務專員|物流异常|物流異常)",
 
@@ -170,6 +226,14 @@ ACTIONS_PAT = {
 
     "要求掃QR": r"(掃(描)?\s*(qr|二維碼|二维码|條碼)|扫码|掃一下|扫一下)",
 
+
+
+    # ✅ NEW：要求提供銀行帳號/個資/付款（對應你新增類別）
+
+    "要求提供銀行帳號或個資/付款": r"(提供|告知|傳|发|发送|填寫|填写).*(身分證|身份证|姓名|住址|地址|電話|手机号|手機號|帳號|账号|帳戶|账户|銀行帳號|银行账号|卡號|卡号|信用卡|cvv|安全碼|有效期限)|"
+
+                            r"(付款|支付|繳費|缴费|匯款|汇款|轉帳|转账).*(指定|我的|本|該|该).*(帳戶|账户|銀行|银行)",
+
 }
 
 
@@ -189,6 +253,12 @@ FLOOR = {
     "freeze_threat": "high",
 
     "transfer_money": "high",
+
+
+
+    # ✅ NEW：高風險
+
+    "payment_personal_info": "high",
 
 
 
@@ -222,41 +292,51 @@ REV  = {0: "low", 1: "medium", 2: "high"}
 
 
 
+# ✅ 這裡的文字就是你「詐騙類型」的顯示名稱（全部都有對應）
+
 CATEGORY_NAME_ZH = {
 
-    "otp_harvest": "索取驗證碼/OTP",
+    "otp_harvest": "驗證碼/OTP 詐騙",
 
-    "atm_operation": "要求操作 ATM/解除分期",
+    "atm_operation": "ATM 操作詐騙",
 
-    "remote_control": "要求安裝遠端控制/螢幕共享",
+    "remote_control": "遠端控制/螢幕共享詐騙",
 
-    "supervisor_account": "要求轉入安全帳戶/監管專戶",
+    "supervisor_account": "安全帳戶/監管帳戶詐騙",
 
-    "money_laundering": "聲稱涉洗錢/金流異常",
+    "money_laundering": "涉洗錢/涉案恐嚇詐騙",
 
-    "freeze_threat": "威脅凍結帳戶/鎖卡",
+    "freeze_threat": "帳戶凍結/停用恐嚇詐騙",
 
-    "transfer_money": "要求匯款/轉帳/入金出金",
+    "transfer_money": "匯款/轉帳詐騙",
 
-    "line_add": "引導加 LINE 客服/私聊",
 
-    "qr_scan": "要求掃描 QR/條碼",
 
-    "urgency_keep_line": "不准掛電話/限時催促/保密",
+    # ✅ NEW
 
-    "install_app": "要求下載/安裝 App 或授權權限",
+    "payment_personal_info": "金流/個資/收款詐騙",
 
-    "customs_scam": "海關/包裹清關詐騙",
 
-    "fake_police": "假冒警方/檢調/法院",
 
-    "investment_scam": "投資帶單/虛擬貨幣詐騙",
+    "line_add": "引導加 LINE 客服詐騙",
+
+    "qr_scan": "QR 掃碼/條碼詐騙",
+
+    "urgency_keep_line": "催促保密/不准掛斷詐騙",
+
+    "install_app": "誘導安裝 App/開權限詐騙",
+
+    "customs_scam": "假海關/包裹清關詐騙",
+
+    "fake_police": "假檢警/法院詐騙",
+
+    "investment_scam": "假投資/帶單/虛擬幣詐騙",
 
     "romance_scam": "交友戀愛/感情勒索詐騙",
 
-    "parcel_refund": "退款/客服/訂單異常詐騙",
+    "parcel_refund": "假客服退款/訂單異常詐騙",
 
-    "small_test": "小額測試/驗證轉帳",
+    "small_test": "小額測試/驗證轉帳詐騙",
 
 }
 
@@ -278,7 +358,123 @@ ADVICE_BY_CATEGORY = {
 
     "parcel_refund": ["客服退款不會要求你操作 ATM 或提供 OTP", "請到官方 APP/網站查訂單，不要點不明連結"],
 
+
+
+    # ✅ NEW：金流/個資
+
+    "payment_personal_info": ["不要提供銀行帳號/卡號/身分證/驗證碼等個資", "不要依指示付款或匯款到對方指定帳戶，請改由你自行撥打 165 或銀行官方客服查證"],
+
 }
+
+
+
+# -------------------------
+
+# ✅ NEW: 單一詐騙類型分類器（scam_type 永遠只有 1 個，且永遠有）
+
+# -------------------------
+
+def build_scam_type_single(cats: List[str], acts: List[str]) -> List[str]:
+
+    """
+
+    回傳單一、明確的詐騙類型（繁中），永遠 1 個。
+
+    優先以規則命中 cats（最穩最一致），再參考 acts。
+
+    """
+
+    if not cats and not acts:
+
+        return ["未明確分類（需更多資訊）"]
+
+
+
+    cats_set = set(cats or [])
+
+
+
+    # ✅ 你可以視覺上理解成「最像你想要的明確標籤」優先順序
+
+    priority_order = [
+
+        "fake_police",
+
+        "money_laundering",
+
+        "supervisor_account",
+
+        "freeze_threat",
+
+
+
+        "payment_personal_info",  # NEW：金流/個資/收款（很關鍵）
+
+        "atm_operation",
+
+        "remote_control",
+
+        "otp_harvest",
+
+
+
+        "investment_scam",
+
+        "romance_scam",
+
+        "customs_scam",
+
+        "parcel_refund",
+
+
+
+        "transfer_money",
+
+        "install_app",
+
+        "qr_scan",
+
+        "line_add",
+
+        "urgency_keep_line",
+
+        "small_test",
+
+    ]
+
+
+
+    for key in priority_order:
+
+        if key in cats_set:
+
+            return [CATEGORY_NAME_ZH.get(key, key)]
+
+
+
+    # 如果 cats 沒有命中，但 acts 有命中，做一個保底映射
+
+    acts_text = " ".join(acts or [])
+
+    if "OTP" in acts_text or "otp" in acts_text.lower():
+
+        return [CATEGORY_NAME_ZH["otp_harvest"]]
+
+    if "ATM" in acts_text or "atm" in acts_text.lower():
+
+        return [CATEGORY_NAME_ZH["atm_operation"]]
+
+    if "遠端" in acts_text or "远端" in acts_text:
+
+        return [CATEGORY_NAME_ZH["remote_control"]]
+
+    if "匯款" in acts_text or "汇款" in acts_text or "轉帳" in acts_text or "转账" in acts_text:
+
+        return [CATEGORY_NAME_ZH["transfer_money"]]
+
+
+
+    return ["其他可疑詐騙"]
 
 
 
@@ -290,7 +486,11 @@ ADVICE_BY_CATEGORY = {
 
 def rule_check(text: str):
 
-    t = _norm(text)
+    # ✅ 不做簡轉繁；直接用原文做規則判斷（你要求「不要動判斷流程」）
+
+    t = _norm(text or "")
+
+
 
     cats, acts = [], []
 
@@ -329,6 +529,8 @@ def rule_check(text: str):
         or ("money_laundering" in cats and ("freeze_threat" in cats or "transfer_money" in cats))
 
         or ("fake_police" in cats and ("transfer_money" in cats or "otp_harvest" in cats))
+
+        or ("payment_personal_info" in cats and ("transfer_money" in cats or "otp_harvest" in cats))
 
     ):
 
@@ -371,7 +573,6 @@ def ffmpeg_bin():
     return b if shutil.which(b) else None
 
 
-
 def to_wav_16k(in_path: str) -> str:
 
     bin_ = ffmpeg_bin()
@@ -410,7 +611,13 @@ def transcribe(filepath: str) -> str:
 
     segs, _ = _whisper.transcribe(filepath, language=None, vad_filter=True, beam_size=1, condition_on_previous_text=False)
 
-    return "".join(s.text for s in segs).strip()
+    text = "".join(s.text for s in segs).strip()
+
+
+
+    # ✅ 不在這裡轉繁（你要求只在輸出前轉）
+
+    return text
 
 
 
@@ -436,9 +643,9 @@ PROMPT = (
 
     "Rules:\n"
 
-    "- If any red flag appears (ATM, OTP, add LINE, remote control, QR scan, safe/supervisor account, police/prosecutor, customs, investment group), risk >= medium.\n"
+    "- If any red flag appears (ATM, OTP, add LINE, remote control, QR scan, safe/supervisor account, police/prosecutor, customs, investment group, payment request, personal info request), risk >= medium.\n"
 
-    "- If two or more strong red flags appear (ATM/OTP/remote/safe-account/transfer/freeze threats/money laundering), risk=high.\n"
+    "- If two or more strong red flags appear (ATM/OTP/remote/safe-account/transfer/freeze threats/money laundering/payment+personal-info), risk=high.\n"
 
     'Output ONLY valid minified JSON: {"is_scam":bool,"risk":"high"|"medium"|"low","reasons":[string],"advices":[string]}'
 
@@ -449,6 +656,10 @@ PROMPT = (
 def call_llm(text: str) -> dict:
 
     text = (text or "").strip()
+
+
+
+    # ✅ 不在送入 LLM 前轉繁（你要求只在輸出偵測文字前轉）
 
     if len(text) > LLM_MAX_CHARS:
 
@@ -506,6 +717,10 @@ def call_llm(text: str) -> dict:
 
         if isinstance(obj, dict):
 
+            if "risk" in obj and isinstance(obj["risk"], str):
+
+                obj["risk"] = obj["risk"].strip().lower()
+
             return obj
 
     except Exception:
@@ -518,7 +733,15 @@ def call_llm(text: str) -> dict:
 
     if m:
 
-        return json.loads(m.group(0))
+        obj = json.loads(m.group(0))
+
+        if isinstance(obj, dict):
+
+            if "risk" in obj and isinstance(obj["risk"], str):
+
+                obj["risk"] = obj["risk"].strip().lower()
+
+            return obj
 
 
 
@@ -596,8 +819,6 @@ def fuse(
 
 ):
 
-
-
     mr = str(llm_obj.get("risk", "low")).lower()
 
     if mr not in ("low", "medium", "high"):
@@ -607,6 +828,14 @@ def fuse(
 
 
     base = REV[max(RANK.get(floor, 0), RANK.get(mr, 0))]
+
+
+
+    # ✅ risk 保底（防呆）
+
+    if base not in ("low", "medium", "high"):
+
+        base = "low"
 
 
 
@@ -652,21 +881,47 @@ def fuse(
 
 
 
+    # ✅ advices 一定有
+
     advices = build_advices(base, cats, llm_obj)
+
+    if not advices:
+
+        advices = ["建議先停止操作，並自行撥打 165 或官方客服查證"]
+
+
+
+    # ✅ NEW：scam_type 一定有、且只會 1 個（明確單一）
+
+    scam_type = build_scam_type_single(cats, acts)
+
+
+
+    # -------------------------
+
+    # ✅ 你要的改動：只在「輸出偵測到的文字」前做簡轉繁
+
+    # -------------------------
+
+    text_out = to_trad(text)
 
 
 
     return {
 
-        "text": text,
+        "text": text_out,                 # 保留：舊版可用
+
+        "detected_text": text_out,        # 前端統一吃這個（OCR/ASR 都用）
+
+        "risk": base,                     # 一定有
+
+        "scam_type": scam_type,           # ✅ 一定有、且單一
+
+        "advices": advices,               # 一定有
 
         "is_scam": is_scam,
 
-        "risk": base,
-
         "reasons": reasons,
-
-        "advices": advices,
 
         "analysis": {
 
@@ -688,7 +943,7 @@ def fuse(
 
             "model_used": model_used,
 
-            "model_error": model_error,
+            "model_error": model_error if model_error else None,
 
             "model_time_ms": t_model_ms
 
@@ -704,6 +959,8 @@ def decide(text: str):
 
     text = (text or "").strip()
 
+
+
     cats, acts, floor = rule_check(text)
 
 
@@ -718,7 +975,7 @@ def decide(text: str):
 
 
 
-    should_call_model = (floor != "low")
+    should_call_model = (floor != "high")
 
 
 
@@ -762,7 +1019,7 @@ def decide(text: str):
 
 
 
-# ===== 儲存統計資料（不含任何個資）=====
+    # ===== 儲存統計資料（不含任何個資）=====
 
     try:
 
@@ -794,7 +1051,6 @@ def decide(text: str):
 
 
 
-
 # -------------------------
 
 # Routes
@@ -817,19 +1073,29 @@ def analyze_text():
 
     text = (data.get("text") or "").strip()
 
+
+
+    # ✅ 不在這裡轉繁；只在輸出 detected_text/text 前轉
+
     if not text:
 
         return jsonify({
 
             "text": "",
 
-            "is_scam": False,
+            "detected_text": "",
 
             "risk": "low",
 
-            "reasons": ["text required"],
+            "scam_type": ["未明確分類（需更多資訊）"],
 
             "advices": ["請提供文字"],
+
+            "is_scam": False,
+
+            "reasons": ["text required"],
+
+            "source": "ocr",
 
             "analysis": {"matched_categories": [], "actions_requested": [], "rule_floor": "low"},
 
@@ -837,7 +1103,13 @@ def analyze_text():
 
         }), 200
 
-    return jsonify(decide(text)), 200
+
+
+    out = decide(text)
+
+    out["source"] = "ocr"
+
+    return jsonify(out), 200
 
 
 
@@ -853,13 +1125,19 @@ def upload_audio():
 
             "text": "",
 
-            "is_scam": False,
+            "detected_text": "",
 
             "risk": "low",
 
-            "reasons": ["缺少音檔"],
+            "scam_type": ["未明確分類（需更多資訊）"],
 
             "advices": ["請用 multipart/form-data，欄位名為 file"],
+
+            "is_scam": False,
+
+            "reasons": ["缺少音檔"],
+
+            "source": "asr",
 
             "analysis": {"matched_categories": [], "actions_requested": [], "rule_floor": "low"},
 
@@ -887,23 +1165,33 @@ def upload_audio():
 
         wav_path = to_wav_16k(raw_path)
 
-        text = transcribe(wav_path)
+        text = transcribe(wav_path)  # ✅ 不轉繁
 
 
 
         if not text or len(text) < 6:
 
+            # ✅ 輸出 detected_text/text 仍然會是繁體（這裡也照你的要求只在輸出前轉）
+
+            text_out = to_trad(text or "")
+
             return jsonify({
 
-                "text": text or "",
+                "text": text_out,
 
-                "is_scam": False,
+                "detected_text": text_out,
 
                 "risk": "low",
 
-                "reasons": ["辨識文字過短或空白"],
+                "scam_type": ["未明確分類（需更多資訊）"],
 
                 "advices": ["請提供更清晰或更長的音檔"],
+
+                "is_scam": False,
+
+                "reasons": ["辨識文字過短或空白"],
+
+                "source": "asr",
 
                 "analysis": {"matched_categories": [], "actions_requested": [], "rule_floor": "low"},
 
@@ -913,23 +1201,37 @@ def upload_audio():
 
 
 
-        return jsonify(decide(text)), 200
+        out = decide(text)  # ✅ decide 內部不轉繁；輸出 detected_text/text 才轉
+
+        out["source"] = "asr"
+
+        return jsonify(out), 200
 
 
 
     except Exception as e:
 
+        # ✅ 這裡 text/detected_text 也照規則只在輸出前轉
+
+        text_out = to_trad(text or "")
+
         return jsonify({
 
-            "text": text or "",
+            "text": text_out,
 
-            "is_scam": True,
+            "detected_text": text_out,
 
             "risk": "medium",
 
-            "reasons": [f"語音流程異常（轉檔/辨識/模型）：{str(e)}"],
+            "scam_type": ["未明確分類（需更多資訊）"],
 
             "advices": ["請先保留音檔與來電資訊", "建議撥打 165 反詐騙諮詢", "若可行，改用文字貼上再分析以取得更完整結果"],
+
+            "is_scam": True,
+
+            "reasons": [f"語音流程異常（轉檔/辨識/模型）：{str(e)}"],
+
+            "source": "asr",
 
             "analysis": {"matched_categories": [], "actions_requested": [], "rule_floor": "medium"},
 
@@ -968,5 +1270,3 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
 
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
